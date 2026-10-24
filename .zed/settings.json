@@ -1,7 +1,8 @@
 {
   "languages": {
     "TypeScript": {
-      "language_servers": ["deno","biome","!vtsls", "!eslint"]
-    }
+      "language_servers": ["biome", "vtsls", "!eslint"]
+    },
+    "TSX": { "language_servers": ["biome", "vtsls", "!eslint"] }
   }
 }
