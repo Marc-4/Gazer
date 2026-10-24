@@ -35,6 +35,7 @@ import { useAuth } from "#/lib/auth";
 import { formatDate, formatTimeRange, todayIsoDate } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { BookingWithVenue } from "#/lib/types";
+import { useBookingsRealtime } from "#/lib/use-realtime";
 import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -74,6 +75,8 @@ function DashboardPage() {
 	useEffect(() => {
 		if (user) loadBookings();
 	}, [user, loadBookings]);
+
+	useBookingsRealtime(loadBookings, Boolean(user));
 
 	useEffect(() => {
 		if (!profile) return;

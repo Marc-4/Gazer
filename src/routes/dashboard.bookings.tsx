@@ -51,6 +51,7 @@ import {
 } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { BookingStatus, BookingWithVenue } from "#/lib/types";
+import { useBookingsRealtime } from "#/lib/use-realtime";
 import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/dashboard/bookings")({
@@ -97,6 +98,8 @@ function BookerBookings() {
 	useEffect(() => {
 		if (user) loadBookings();
 	}, [user, loadBookings]);
+
+	useBookingsRealtime(loadBookings, Boolean(user));
 
 	const today = todayIsoDate();
 

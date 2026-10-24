@@ -63,7 +63,9 @@ import {
 	filterAvailabilityForVenue,
 	isAvailabilityBlocked,
 } from "#/lib/availability";
+import { bookingUserMessage, ensureBookingUser } from "#/lib/booking-user";
 import {
+	DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	formatDate,
 	formatDateTime,
@@ -73,6 +75,7 @@ import {
 import { supabase } from "#/lib/supabase";
 import type { AvailabilityEntry, BookingWithVenue, Venue } from "#/lib/types";
 import { useDebouncedValue } from "#/lib/use-debounced-value";
+import { useBookingsRealtime } from "#/lib/use-realtime";
 
 interface AdminBookingsSearch {
 	review?: string;
@@ -117,7 +120,7 @@ function createEmptyNewBookingForm(): NewBookingFormState {
 		venueId: "",
 		bookingDate: todayIsoDate(),
 		startTime: DEFAULT_START_TIME,
-		endTime: "",
+		endTime: DEFAULT_END_TIME,
 		activityName: "",
 		activityDescription: "",
 		organizationName: "",
@@ -318,8 +321,11 @@ function NewBookingDialog({
 		setSaving(true);
 		setError(null);
 		const now = new Date().toISOString();
+		const publicToken = crypto.randomUUID();
+		const bookingId = crypto.randomUUID();
 		const { error: insertError } = await supabase.from("bookings").insert({
-			public_token: crypto.randomUUID(),
+			id: bookingId,
+			public_token: publicToken,
 			user_id: null,
 			venue_id: form.venueId,
 			booking_date: form.bookingDate,
@@ -348,6 +354,19 @@ function NewBookingDialog({
 		}
 
 		toast.success("Booking created");
+
+		try {
+			const accountResult = await ensureBookingUser(bookingId, publicToken);
+			const message = bookingUserMessage(accountResult);
+			if (message?.type === "warning") toast.warning(message.message);
+			else if (message) toast.success(message.message);
+		} catch (accountError) {
+			console.error("Unable to prepare booking account", accountError);
+			toast.warning(
+				"Booking created, but the requester account could not be prepared.",
+			);
+		}
+
 		setSaving(false);
 		onOpenChange(false);
 		await onSaved();
@@ -733,6 +752,7 @@ function AdminBookings() {
 	}, [review]);
 
 	const refresh = () => setRefreshKey((key) => key + 1);
+	useBookingsRealtime(refresh);
 
 	const closeSelected = () => {
 		setSelected(null);

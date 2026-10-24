@@ -74,6 +74,7 @@ import {
 	type SchoolEventFilter,
 } from "#/lib/admin-queries";
 import {
+    DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	formatDate,
 	formatTimeRange,
@@ -102,7 +103,7 @@ function createEmptyForm(): EventFormState {
 		venueId: "",
 		eventDate: todayIsoDate(),
 		startTime: DEFAULT_START_TIME,
-		endTime: "",
+		endTime: DEFAULT_END_TIME,
 		description: "",
 	};
 }

@@ -16,17 +16,15 @@ import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "#/components/page-header";
 import { BookingStatusBadge } from "#/components/status-badge";
 import { buttonVariants } from "#/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "#/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Skeleton } from "#/components/ui/skeleton";
 import { formatDate, formatTimeRange, todayIsoDate } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { BookingWithVenue } from "#/lib/types";
+import {
+	useBookingsRealtime,
+	useNotificationOutboxRealtime,
+} from "#/lib/use-realtime";
 import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/admin/")({
@@ -91,6 +89,9 @@ function AdminOverview() {
 	useEffect(() => {
 		load();
 	}, [load]);
+
+	useBookingsRealtime(load);
+	useNotificationOutboxRealtime(load);
 
 	if (loading || !stats) {
 		return (
@@ -182,19 +183,7 @@ function AdminOverview() {
 							<CardTitle className="font-[Fraunces,Georgia,serif] text-xl">
 								Recent requests
 							</CardTitle>
-							<CardDescription>
-								The five most recently submitted bookings.
-							</CardDescription>
 						</div>
-						<Link
-							to="/admin/bookings"
-							className={cn(
-								buttonVariants({ variant: "ghost", size: "sm" }),
-								"no-underline",
-							)}
-						>
-							View all
-						</Link>
 					</CardHeader>
 					<CardContent>
 						{recent.length === 0 ? (

@@ -49,6 +49,7 @@ import type {
 	SchoolEventWithVenue,
 	Venue,
 } from "#/lib/types";
+import { useBookingsRealtime } from "#/lib/use-realtime";
 import { cn } from "#/lib/utils";
 
 interface CalendarSearch {
@@ -132,6 +133,8 @@ function AdminCalendar() {
 	useEffect(() => {
 		load();
 	}, [load]);
+
+	useBookingsRealtime(load);
 
 	useEffect(() => {
 		if (!date) return;

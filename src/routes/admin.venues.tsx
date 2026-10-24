@@ -72,6 +72,7 @@ import { slugify } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { Venue } from "#/lib/types";
 import { useDebouncedValue } from "#/lib/use-debounced-value";
+import { useBookingsRealtime } from "#/lib/use-realtime";
 
 interface AdminVenuesSearch {
 	venue?: string;
@@ -516,6 +517,7 @@ function AdminVenues() {
 	};
 
 	const refresh = () => setRefreshKey((key) => key + 1);
+	useBookingsRealtime(refresh);
 
 	const toggleActive = async (venue: Venue) => {
 		const { error } = await supabase

@@ -33,6 +33,7 @@ import {
 import { emailTemplateLabel, formatDateTime } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { NotificationOutboxItem } from "#/lib/types";
+import { useNotificationOutboxRealtime } from "#/lib/use-realtime";
 
 export const Route = createFileRoute("/admin/notifications")({
 	component: AdminNotifications,
@@ -129,6 +130,7 @@ function AdminNotifications() {
 	}, [loadSettings]);
 
 	const refresh = () => setRefreshKey((key) => key + 1);
+	useNotificationOutboxRealtime(refresh);
 
 	const toggleAutomaticEmails = async (enabled: boolean) => {
 		setSavingSettings(true);

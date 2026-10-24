@@ -32,6 +32,7 @@ import {
 import { formatDate, formatDateTime, formatTimeRange } from "#/lib/format";
 import type { AuditLogEntry } from "#/lib/types";
 import { useDebouncedValue } from "#/lib/use-debounced-value";
+import { useBookingStatusHistoryRealtime } from "#/lib/use-realtime";
 
 export const Route = createFileRoute("/admin/audit")({
 	component: AdminAuditLog,
@@ -54,8 +55,10 @@ function AdminAuditLog() {
 	const [pageSize, setPageSize] = useState(10);
 	const [total, setTotal] = useState(0);
 	const [totalAll, setTotalAll] = useState(0);
+	const [refreshKey, setRefreshKey] = useState(0);
 	const debouncedQuery = useDebouncedValue(query);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey intentionally retriggers the query after realtime changes.
 	useEffect(() => {
 		let active = true;
 		setLoading(true);
@@ -87,7 +90,10 @@ function AdminAuditLog() {
 		return () => {
 			active = false;
 		};
-	}, [page, pageSize, filter, debouncedQuery]);
+	}, [page, pageSize, filter, debouncedQuery, refreshKey]);
+
+	const refresh = () => setRefreshKey((key) => key + 1);
+	useBookingStatusHistoryRealtime(refresh);
 
 	return (
 		<div>

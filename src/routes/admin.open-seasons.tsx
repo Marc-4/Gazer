@@ -60,6 +60,7 @@ import {
 	type OpenSeasonFilter,
 } from "#/lib/admin-queries";
 import {
+    DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	formatDateTime,
 	fromDateTimeLocal,
@@ -88,7 +89,7 @@ function createEmptyForm(): SeasonFormState {
 		name: "",
 		description: "",
 		startsAt: todayAtTimeLocal(DEFAULT_START_TIME),
-		endsAt: "",
+		endsAt: todayAtTimeLocal(DEFAULT_END_TIME),
 		isEnabled: true,
 	};
 }
