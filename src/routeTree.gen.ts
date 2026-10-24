@@ -10,33 +10,309 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as BookRouteImport } from './routes/book'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAuditRouteImport } from './routes/admin.audit'
+import { Route as AdminBookingsRouteImport } from './routes/admin.bookings'
+import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
+import { Route as AdminEventsRouteImport } from './routes/admin.events'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminOpenSeasonsRouteImport } from './routes/admin.open-seasons'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminVenuesRouteImport } from './routes/admin.venues'
+import { Route as BookingsIndexRouteImport } from './routes/bookings.index'
+import { Route as BookingsTokenRouteImport } from './routes/bookings.$token'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardBookingsRouteImport } from './routes/dashboard.bookings'
+import { Route as ApiAdminUsersRouteImport } from './routes/api/admin/users'
+import { Route as ApiBookingsEnsureUserRouteImport } from './routes/api/bookings/ensure-user'
+import { Route as ApiNotificationsDispatchRouteImport } from './routes/api/notifications/dispatch'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookRoute = BookRouteImport.update({
+  id: '/book',
+  path: '/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBookingsRoute = AdminBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCalendarRoute = AdminCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEventsRoute = AdminEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOpenSeasonsRoute = AdminOpenSeasonsRouteImport.update({
+  id: '/open-seasons',
+  path: '/open-seasons',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminVenuesRoute = AdminVenuesRouteImport.update({
+  id: '/venues',
+  path: '/venues',
+  getParentRoute: () => AdminRoute,
+} as any)
+const BookingsIndexRoute = BookingsIndexRouteImport.update({
+  id: '/bookings/',
+  path: '/bookings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookingsTokenRoute = BookingsTokenRouteImport.update({
+  id: '/bookings/$token',
+  path: '/bookings/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardBookingsRoute = DashboardBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const ApiAdminUsersRoute = ApiAdminUsersRouteImport.update({
+  id: '/api/admin/users',
+  path: '/api/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBookingsEnsureUserRoute = ApiBookingsEnsureUserRouteImport.update({
+  id: '/api/bookings/ensure-user',
+  path: '/api/bookings/ensure-user',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNotificationsDispatchRoute =
+  ApiNotificationsDispatchRouteImport.update({
+    id: '/api/notifications/dispatch',
+    path: '/api/notifications/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/book': typeof BookRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/calendar': typeof AdminCalendarRoute
+  '/admin/events': typeof AdminEventsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/open-seasons': typeof AdminOpenSeasonsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/venues': typeof AdminVenuesRoute
+  '/bookings/$token': typeof BookingsTokenRoute
+  '/dashboard/bookings': typeof DashboardBookingsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/bookings/': typeof BookingsIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
+  '/api/bookings/ensure-user': typeof ApiBookingsEnsureUserRoute
+  '/api/notifications/dispatch': typeof ApiNotificationsDispatchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/book': typeof BookRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/calendar': typeof AdminCalendarRoute
+  '/admin/events': typeof AdminEventsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/open-seasons': typeof AdminOpenSeasonsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/venues': typeof AdminVenuesRoute
+  '/bookings/$token': typeof BookingsTokenRoute
+  '/dashboard/bookings': typeof DashboardBookingsRoute
+  '/admin': typeof AdminIndexRoute
+  '/bookings': typeof BookingsIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
+  '/api/bookings/ensure-user': typeof ApiBookingsEnsureUserRoute
+  '/api/notifications/dispatch': typeof ApiNotificationsDispatchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/book': typeof BookRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/bookings': typeof AdminBookingsRoute
+  '/admin/calendar': typeof AdminCalendarRoute
+  '/admin/events': typeof AdminEventsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/open-seasons': typeof AdminOpenSeasonsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/venues': typeof AdminVenuesRoute
+  '/bookings/$token': typeof BookingsTokenRoute
+  '/dashboard/bookings': typeof DashboardBookingsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/bookings/': typeof BookingsIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
+  '/api/bookings/ensure-user': typeof ApiBookingsEnsureUserRoute
+  '/api/notifications/dispatch': typeof ApiNotificationsDispatchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/book'
+    | '/dashboard'
+    | '/forgot-password'
+    | '/login'
+    | '/signup'
+    | '/admin/audit'
+    | '/admin/bookings'
+    | '/admin/calendar'
+    | '/admin/events'
+    | '/admin/notifications'
+    | '/admin/open-seasons'
+    | '/admin/users'
+    | '/admin/venues'
+    | '/bookings/$token'
+    | '/dashboard/bookings'
+    | '/admin/'
+    | '/bookings/'
+    | '/dashboard/'
+    | '/api/admin/users'
+    | '/api/bookings/ensure-user'
+    | '/api/notifications/dispatch'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/book'
+    | '/forgot-password'
+    | '/login'
+    | '/signup'
+    | '/admin/audit'
+    | '/admin/bookings'
+    | '/admin/calendar'
+    | '/admin/events'
+    | '/admin/notifications'
+    | '/admin/open-seasons'
+    | '/admin/users'
+    | '/admin/venues'
+    | '/bookings/$token'
+    | '/dashboard/bookings'
+    | '/admin'
+    | '/bookings'
+    | '/dashboard'
+    | '/api/admin/users'
+    | '/api/bookings/ensure-user'
+    | '/api/notifications/dispatch'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/book'
+    | '/dashboard'
+    | '/forgot-password'
+    | '/login'
+    | '/signup'
+    | '/admin/audit'
+    | '/admin/bookings'
+    | '/admin/calendar'
+    | '/admin/events'
+    | '/admin/notifications'
+    | '/admin/open-seasons'
+    | '/admin/users'
+    | '/admin/venues'
+    | '/bookings/$token'
+    | '/dashboard/bookings'
+    | '/admin/'
+    | '/bookings/'
+    | '/dashboard/'
+    | '/api/admin/users'
+    | '/api/bookings/ensure-user'
+    | '/api/notifications/dispatch'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  BookRoute: typeof BookRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
+  BookingsTokenRoute: typeof BookingsTokenRoute
+  BookingsIndexRoute: typeof BookingsIndexRoute
+  ApiAdminUsersRoute: typeof ApiAdminUsersRoute
+  ApiBookingsEnsureUserRoute: typeof ApiBookingsEnsureUserRoute
+  ApiNotificationsDispatchRoute: typeof ApiNotificationsDispatchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +324,216 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book': {
+      id: '/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof BookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/bookings': {
+      id: '/admin/bookings'
+      path: '/bookings'
+      fullPath: '/admin/bookings'
+      preLoaderRoute: typeof AdminBookingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/calendar': {
+      id: '/admin/calendar'
+      path: '/calendar'
+      fullPath: '/admin/calendar'
+      preLoaderRoute: typeof AdminCalendarRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/events': {
+      id: '/admin/events'
+      path: '/events'
+      fullPath: '/admin/events'
+      preLoaderRoute: typeof AdminEventsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/open-seasons': {
+      id: '/admin/open-seasons'
+      path: '/open-seasons'
+      fullPath: '/admin/open-seasons'
+      preLoaderRoute: typeof AdminOpenSeasonsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/venues': {
+      id: '/admin/venues'
+      path: '/venues'
+      fullPath: '/admin/venues'
+      preLoaderRoute: typeof AdminVenuesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/bookings/': {
+      id: '/bookings/'
+      path: '/bookings'
+      fullPath: '/bookings/'
+      preLoaderRoute: typeof BookingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bookings/$token': {
+      id: '/bookings/$token'
+      path: '/bookings/$token'
+      fullPath: '/bookings/$token'
+      preLoaderRoute: typeof BookingsTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/bookings': {
+      id: '/dashboard/bookings'
+      path: '/bookings'
+      fullPath: '/dashboard/bookings'
+      preLoaderRoute: typeof DashboardBookingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/api/admin/users': {
+      id: '/api/admin/users'
+      path: '/api/admin/users'
+      fullPath: '/api/admin/users'
+      preLoaderRoute: typeof ApiAdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bookings/ensure-user': {
+      id: '/api/bookings/ensure-user'
+      path: '/api/bookings/ensure-user'
+      fullPath: '/api/bookings/ensure-user'
+      preLoaderRoute: typeof ApiBookingsEnsureUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/notifications/dispatch': {
+      id: '/api/notifications/dispatch'
+      path: '/api/notifications/dispatch'
+      fullPath: '/api/notifications/dispatch'
+      preLoaderRoute: typeof ApiNotificationsDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminAuditRoute: typeof AdminAuditRoute
+  AdminBookingsRoute: typeof AdminBookingsRoute
+  AdminCalendarRoute: typeof AdminCalendarRoute
+  AdminEventsRoute: typeof AdminEventsRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminOpenSeasonsRoute: typeof AdminOpenSeasonsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminVenuesRoute: typeof AdminVenuesRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAuditRoute: AdminAuditRoute,
+  AdminBookingsRoute: AdminBookingsRoute,
+  AdminCalendarRoute: AdminCalendarRoute,
+  AdminEventsRoute: AdminEventsRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminOpenSeasonsRoute: AdminOpenSeasonsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminVenuesRoute: AdminVenuesRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface DashboardRouteChildren {
+  DashboardBookingsRoute: typeof DashboardBookingsRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardBookingsRoute: DashboardBookingsRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  BookRoute: BookRoute,
+  DashboardRoute: DashboardRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
+  BookingsTokenRoute: BookingsTokenRoute,
+  BookingsIndexRoute: BookingsIndexRoute,
+  ApiAdminUsersRoute: ApiAdminUsersRoute,
+  ApiBookingsEnsureUserRoute: ApiBookingsEnsureUserRoute,
+  ApiNotificationsDispatchRoute: ApiNotificationsDispatchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
