@@ -40,7 +40,9 @@ import {
 	availabilityConflicts,
 	filterAvailabilityForVenue,
 } from "#/lib/availability";
+import { bookingUserMessage, ensureBookingUser } from "#/lib/booking-user";
 import {
+    DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	formatDate,
 	formatTimeRange,
@@ -55,14 +57,26 @@ import type {
 } from "#/lib/types";
 import { cn } from "#/lib/utils";
 
-export const Route = createFileRoute("/book")({ component: BookPage });
+interface BookSearch {
+	venue?: string;
+}
 
-function createEmptyForm(): BookingFormValues {
+export const Route = createFileRoute("/book")({
+	validateSearch: (search: Record<string, unknown>): BookSearch => ({
+		venue:
+			typeof search.venue === "string" && search.venue
+				? search.venue
+				: undefined,
+	}),
+	component: BookPage,
+});
+
+function createEmptyForm(venueId = ""): BookingFormValues {
 	return {
-		venueId: "",
+		venueId,
 		bookingDate: todayIsoDate(),
 		startTime: DEFAULT_START_TIME,
-		endTime: "",
+		endTime: DEFAULT_END_TIME,
 		activityName: "",
 		activityDescription: "",
 		organizationName: "",
@@ -118,11 +132,14 @@ function mapInsertError(error: { code?: string; message?: string }) {
 
 function BookPage() {
 	const navigate = useNavigate();
+	const { venue: venueParam } = Route.useSearch();
 	const { user, profile } = useAuth();
 	const [venues, setVenues] = useState<Venue[]>([]);
 	const [openSeason, setOpenSeason] = useState<OpenSeason | null>(null);
 	const [loadingVenues, setLoadingVenues] = useState(true);
-	const [values, setValues] = useState<BookingFormValues>(createEmptyForm);
+	const [values, setValues] = useState<BookingFormValues>(() =>
+		createEmptyForm(venueParam),
+	);
 	const [submitting, setSubmitting] = useState(false);
 	const [availability, setAvailability] = useState<{
 		venueId: string;
@@ -152,12 +169,16 @@ function BookPage() {
 			const nextVenues = (venuesResult.data as Venue[] | null) ?? [];
 			setVenues(nextVenues);
 			setOpenSeason((seasonResult.data as OpenSeason | null) ?? null);
-			if (nextVenues.length === 1) {
-				setValues((current) => ({
-					...current,
-					venueId: current.venueId || nextVenues[0].id,
-				}));
-			}
+			setValues((current) => {
+				const requested = current.venueId || venueParam || "";
+				if (nextVenues.some((venue) => venue.id === requested)) {
+					return { ...current, venueId: requested };
+				}
+				if (nextVenues.length === 1) {
+					return { ...current, venueId: nextVenues[0].id };
+				}
+				return { ...current, venueId: "" };
+			});
 			setLoadingVenues(false);
 		}
 
@@ -165,7 +186,17 @@ function BookPage() {
 		return () => {
 			active = false;
 		};
-	}, []);
+	}, [venueParam]);
+
+	useEffect(() => {
+		if (!venueParam) return;
+		if (!venues.some((venue) => venue.id === venueParam)) return;
+		setValues((current) =>
+			current.venueId === venueParam
+				? current
+				: { ...current, venueId: venueParam },
+		);
+	}, [venueParam, venues]);
 
 	useEffect(() => {
 		if (!user) return;
@@ -253,7 +284,9 @@ function BookPage() {
 		setSubmitting(true);
 
 		const publicToken = crypto.randomUUID();
+		const bookingId = crypto.randomUUID();
 		const { error: insertError } = await supabase.from("bookings").insert({
+			id: bookingId,
 			public_token: publicToken,
 			venue_id: values.venueId,
 			booking_date: values.bookingDate,
@@ -277,6 +310,19 @@ function BookPage() {
 		}
 
 		toast.success("Booking request submitted");
+
+		try {
+			const accountResult = await ensureBookingUser(bookingId, publicToken);
+			const message = bookingUserMessage(accountResult);
+			if (message?.type === "warning") toast.warning(message.message);
+			else if (message) toast.success(message.message);
+		} catch (accountError) {
+			console.error("Unable to prepare booking account", accountError);
+			toast.warning(
+				"Booking submitted, but we could not prepare your account. Your booking link still works.",
+			);
+		}
+
 		await navigate({
 			to: "/bookings/$token",
 			params: { token: publicToken },

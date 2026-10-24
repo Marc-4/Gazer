@@ -215,6 +215,7 @@ function Home() {
 										</div>
 										<Link
 											to="/book"
+											search={{ venue: venue.id }}
 											className={cn(
 												buttonVariants({ variant: "outline", size: "sm" }),
 												"shrink-0 no-underline",

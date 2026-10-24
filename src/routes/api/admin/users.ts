@@ -13,6 +13,16 @@ function parseOptionalString(value: unknown) {
 	return typeof value === "string" ? value.trim() : null;
 }
 
+const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function appRedirectTo(request: Request) {
+	const base =
+		process.env.APP_URL ??
+		process.env.VITE_APP_URL ??
+		new URL(request.url).origin;
+	return `${base.replace(/\/$/, "")}/forgot-password`;
+}
+
 function serviceRoleError() {
 	return Response.json(
 		{
@@ -44,14 +54,33 @@ export const Route = createFileRoute("/api/admin/users")({
 					role?: unknown;
 				} | null;
 
-				const email = parseOptionalString(body?.email);
+				const email = parseOptionalString(body?.email)?.toLowerCase() ?? null;
 				const fullName = parseOptionalString(body?.fullName);
 				const role = parseRole(body?.role) ?? "booker";
 
-				if (!email || !email.includes("@")) {
+				if (!email || !emailPattern.test(email)) {
 					return Response.json(
 						{ error: "A valid email is required." },
 						{ status: 400 },
+					);
+				}
+
+				const { data: existing, error: existingError } = await admin
+					.from("profiles")
+					.select("id")
+					.eq("email", email)
+					.maybeSingle();
+
+				if (existingError) {
+					return Response.json(
+						{ error: existingError.message },
+						{ status: 500 },
+					);
+				}
+				if (existing) {
+					return Response.json(
+						{ error: "A user with that email already exists." },
+						{ status: 409 },
 					);
 				}
 
@@ -59,11 +88,24 @@ export const Route = createFileRoute("/api/admin/users")({
 					email,
 					{
 						data: fullName ? { full_name: fullName } : undefined,
+						redirectTo: appRedirectTo(request),
 					},
 				);
 
 				if (error) {
-					return Response.json({ error: error.message }, { status: 400 });
+					const status = /already|registered|exists/i.test(error.message)
+						? 409
+						: 400;
+					return Response.json({ error: error.message }, { status });
+				}
+				if (!data.user) {
+					return Response.json(
+						{
+							error:
+								"The invitation was sent, but no user record was returned.",
+						},
+						{ status: 500 },
+					);
 				}
 
 				if (role === "admin" && data.user) {

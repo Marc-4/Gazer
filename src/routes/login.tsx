@@ -15,6 +15,9 @@ import { Label } from "#/components/ui/label";
 import { useAuth } from "#/lib/auth";
 import { supabase } from "#/lib/supabase";
 
+const initialAuthHash =
+	typeof window === "undefined" ? "" : window.location.hash;
+
 export const Route = createFileRoute("/login")({
 	validateSearch: (search: Record<string, unknown>) => {
 		const redirect =
@@ -36,6 +39,20 @@ function LoginPage() {
 	const [password, setPassword] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		const params = new URLSearchParams(initialAuthHash.replace(/^#/, ""));
+		if (!params.get("error")) return;
+		setError(
+			params.get("error_description") ??
+				"This link is invalid or has expired. Request a new one below.",
+		);
+		window.history.replaceState(
+			null,
+			"",
+			`${window.location.pathname}${window.location.search}`,
+		);
+	}, []);
 
 	useEffect(() => {
 		if (!loading && user) {
@@ -119,9 +136,18 @@ function LoginPage() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="password" required>
-								Password
-							</Label>
+							<div className="flex items-center justify-between gap-3">
+								<Label htmlFor="password" required>
+									Password
+								</Label>
+								<Link
+									to="/forgot-password"
+									search={{ redirect }}
+									className="text-xs font-semibold text-muted-foreground underline-offset-4 hover:underline"
+								>
+									Forgot password?
+								</Link>
+							</div>
 							<Input
 								id="password"
 								type="password"
