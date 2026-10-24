@@ -1,0 +1,1 @@
+DROP INDEX "school_events_venue_date_uidx";
