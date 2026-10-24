@@ -10,9 +10,8 @@ import {
 import { formatRelativeToNow } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { AdminNotification } from "#/lib/types";
+import { useAdminNotificationsRealtime } from "#/lib/use-realtime";
 import { cn } from "#/lib/utils";
-
-const POLL_INTERVAL_MS = 30_000;
 
 export function AdminNotificationBell({ className }: { className?: string }) {
 	const [open, setOpen] = useState(false);
@@ -37,20 +36,10 @@ export function AdminNotificationBell({ className }: { className?: string }) {
 
 	useEffect(() => {
 		loadCount();
+	}, [loadCount]);
 
-		const interval = window.setInterval(() => {
-			if (!open) loadCount();
-		}, POLL_INTERVAL_MS);
-
-		return () => window.clearInterval(interval);
-	}, [loadCount, open]);
-
-	const handleOpenChange = async (nextOpen: boolean) => {
-		setOpen(nextOpen);
-		if (!nextOpen) return;
-
+	const loadItems = useCallback(async () => {
 		setLoading(true);
-		setItems([]);
 		const { data, error } = await supabase
 			.from("admin_notifications")
 			.select("*")
@@ -61,10 +50,19 @@ export function AdminNotificationBell({ className }: { className?: string }) {
 
 		if (error) {
 			toast.error(error.message);
-			return;
+			return false;
 		}
 
 		setItems((data as AdminNotification[] | null) ?? []);
+		return true;
+	}, []);
+
+	const handleOpenChange = async (nextOpen: boolean) => {
+		setOpen(nextOpen);
+		if (!nextOpen) return;
+
+		setItems([]);
+		if (!(await loadItems())) return;
 		setUnreadCount(0);
 
 		const { error: seenError } = await supabase.rpc(
@@ -72,6 +70,13 @@ export function AdminNotificationBell({ className }: { className?: string }) {
 		);
 		if (seenError) toast.error(seenError.message);
 	};
+
+	const handleRealtimeChange = useCallback(() => {
+		loadCount();
+		if (open) loadItems();
+	}, [loadCount, loadItems, open]);
+
+	useAdminNotificationsRealtime(handleRealtimeChange);
 
 	const openBooking = (bookingId: string) => {
 		setOpen(false);
