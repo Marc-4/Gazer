@@ -258,6 +258,48 @@ export const bookingStatusHistory = pgTable(
 	],
 );
 
+/**
+ * In-app notifications for administrators.
+ *
+ * A database trigger inserts one row when a pending booking is created. The
+ * bell UI marks notifications as seen without deleting them; a booking status
+ * trigger removes the related row once the request is approved or rejected.
+ */
+export const adminNotifications = pgTable(
+	"admin_notifications",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		bookingId: uuid("booking_id")
+			.notNull()
+			.references(() => bookings.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		message: text("message").notNull(),
+		status: text("status").notNull().default("unseen"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(table) => [
+		index("admin_notifications_created_at_idx").on(table.createdAt.desc()),
+		index("admin_notifications_booking_id_idx").on(table.bookingId),
+		index("admin_notifications_unseen_idx")
+			.on(table.status)
+			.where(sql`${table.status} = 'unseen'`),
+		check(
+			"admin_notifications_title_not_blank",
+			sql`length(trim(${table.title})) > 0`,
+		),
+		check(
+			"admin_notifications_message_not_blank",
+			sql`length(trim(${table.message})) > 0`,
+		),
+		check(
+			"admin_notifications_status_valid",
+			sql`${table.status} in ('unseen', 'seen')`,
+		),
+	],
+);
+
 export const openSeasons = pgTable(
 	"open_seasons",
 	{
