@@ -22,6 +22,7 @@ export async function dispatchNotificationOutbox(options?: {
 	limit?: number;
 	retryFailed?: boolean;
 	onlyWhenAutomaticEnabled?: boolean;
+	id?: string;
 }): Promise<DispatchResult> {
 	const databaseUrl = process.env.DATABASE_URL;
 	if (!databaseUrl) {
@@ -71,13 +72,18 @@ export async function dispatchNotificationOutbox(options?: {
 				.select()
 				.from(notificationOutbox)
 				.where(
-					and(
-						eq(notificationOutbox.status, "pending"),
-						lte(notificationOutbox.scheduledFor, new Date()),
-					),
+					options?.id
+						? and(
+								eq(notificationOutbox.id, options.id),
+								eq(notificationOutbox.status, "pending"),
+							)
+						: and(
+								eq(notificationOutbox.status, "pending"),
+								lte(notificationOutbox.scheduledFor, new Date()),
+							),
 				)
 				.orderBy(notificationOutbox.scheduledFor)
-				.limit(limit)
+				.limit(options?.id ? 1 : limit)
 				.for("update", { skipLocked: true });
 
 			const result: DispatchResult = {
@@ -139,6 +145,62 @@ export async function dispatchNotificationOutbox(options?: {
 
 			return result;
 		});
+	} finally {
+		await client.end({ timeout: 5 });
+	}
+}
+
+export async function cancelNotificationOutboxItem(id: string) {
+	const databaseUrl = process.env.DATABASE_URL;
+	if (!databaseUrl) {
+		throw new Error("DATABASE_URL is not set");
+	}
+
+	const { client, db } = createDatabase(databaseUrl);
+	try {
+		const rows = await db
+			.update(notificationOutbox)
+			.set({ status: "cancelled" })
+			.where(
+				and(
+					eq(notificationOutbox.id, id),
+					eq(notificationOutbox.status, "pending"),
+				),
+			)
+			.returning({ id: notificationOutbox.id });
+
+		return rows.length > 0;
+	} finally {
+		await client.end({ timeout: 5 });
+	}
+}
+
+export async function requeueNotificationOutboxItem(id: string) {
+	const databaseUrl = process.env.DATABASE_URL;
+	if (!databaseUrl) {
+		throw new Error("DATABASE_URL is not set");
+	}
+
+	const { client, db } = createDatabase(databaseUrl);
+	try {
+		const rows = await db
+			.update(notificationOutbox)
+			.set({
+				status: "pending",
+				attempts: 0,
+				lastError: null,
+				sentAt: null,
+				scheduledFor: new Date(),
+			})
+			.where(
+				and(
+					eq(notificationOutbox.id, id),
+					eq(notificationOutbox.status, "cancelled"),
+				),
+			)
+			.returning({ id: notificationOutbox.id });
+
+		return rows.length > 0;
 	} finally {
 		await client.end({ timeout: 5 });
 	}

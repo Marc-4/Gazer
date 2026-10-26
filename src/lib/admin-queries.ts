@@ -4,6 +4,7 @@ import type {
 	AuditLogEntry,
 	BookingStatus,
 	BookingWithVenue,
+	EmailTemplate,
 	NotificationOutboxItem,
 	NotificationStatus,
 	OpenSeason,
@@ -21,6 +22,7 @@ export interface PageResult<T> {
 
 export type BookingFilter = "all" | BookingStatus;
 export type VenueFilter = "all" | "active" | "inactive";
+export type VenueCapacityFilter = "all" | "small" | "medium" | "large";
 export type OpenSeasonFilter =
 	| "all"
 	| "active"
@@ -28,6 +30,14 @@ export type OpenSeasonFilter =
 	| "ended"
 	| "disabled";
 export type SchoolEventFilter = "upcoming" | "past" | "all";
+export type UserFilter = "all" | "admin" | "booker";
+export type UserStatusFilter = "all" | "active" | "inactive";
+export type OutboxTemplateFilter = "all" | EmailTemplate;
+
+export interface VenueOption {
+	id: string;
+	name: string;
+}
 
 export function buildSearchFilter(columns: string[], query: string) {
 	const term = query
@@ -45,11 +55,15 @@ export async function fetchBookingsPage({
 	pageSize,
 	filter,
 	query,
+	venueId,
+	bookingDate,
 }: {
 	page: number;
 	pageSize: number;
 	filter: BookingFilter;
 	query: string;
+	venueId: string;
+	bookingDate: string;
 }): Promise<PageResult<BookingWithVenue>> {
 	const from = (page - 1) * pageSize;
 	let request = supabase
@@ -57,6 +71,8 @@ export async function fetchBookingsPage({
 		.select("*", { count: "exact" });
 
 	if (filter !== "all") request = request.eq("status", filter);
+	if (venueId !== "all") request = request.eq("venue_id", venueId);
+	if (bookingDate) request = request.eq("booking_date", bookingDate);
 
 	const search = buildSearchFilter(
 		[
@@ -111,22 +127,39 @@ export async function fetchVenueById(id: string) {
 	return (data as Venue | null) ?? null;
 }
 
+export async function fetchVenueOptions(): Promise<VenueOption[]> {
+	const { data, error } = await supabase
+		.from("venues")
+		.select("id, name")
+		.order("name")
+		.order("id");
+
+	if (error) throw error;
+	return (data as VenueOption[] | null) ?? [];
+}
+
 export async function fetchVenuesPage({
 	page,
 	pageSize,
 	filter,
 	query,
+	capacity,
 }: {
 	page: number;
 	pageSize: number;
 	filter: VenueFilter;
 	query: string;
+	capacity: VenueCapacityFilter;
 }): Promise<PageResult<Venue>> {
 	const from = (page - 1) * pageSize;
 	let request = supabase.from("venues").select("*", { count: "exact" });
 
 	if (filter === "active") request = request.eq("is_active", true);
 	if (filter === "inactive") request = request.eq("is_active", false);
+	if (capacity === "small") request = request.lt("capacity", 50);
+	if (capacity === "medium")
+		request = request.gte("capacity", 50).lte("capacity", 100);
+	if (capacity === "large") request = request.gt("capacity", 100);
 
 	const search = buildSearchFilter(
 		["name", "slug", "address", "description"],
@@ -239,11 +272,15 @@ export async function fetchSchoolEventsPage({
 	pageSize,
 	filter,
 	query,
+	venueId,
+	eventDate,
 }: {
 	page: number;
 	pageSize: number;
 	filter: SchoolEventFilter;
 	query: string;
+	venueId: string;
+	eventDate: string;
 }): Promise<PageResult<SchoolEventWithVenue>> {
 	const from = (page - 1) * pageSize;
 	const today = todayIsoDate();
@@ -253,6 +290,8 @@ export async function fetchSchoolEventsPage({
 
 	if (filter === "upcoming") request = request.gte("event_date", today);
 	if (filter === "past") request = request.lt("event_date", today);
+	if (venueId !== "all") request = request.eq("venue_id", venueId);
+	if (eventDate) request = request.eq("event_date", eventDate);
 
 	const search = buildSearchFilter(
 		["title", "description", "venue_name"],
@@ -294,11 +333,15 @@ export async function fetchAuditLogPage({
 	pageSize,
 	filter,
 	query,
+	venueId,
+	bookingDate,
 }: {
 	page: number;
 	pageSize: number;
 	filter: AuditLogFilter;
 	query: string;
+	venueId: string;
+	bookingDate: string;
 }): Promise<PageResult<AuditLogEntry>> {
 	const from = (page - 1) * pageSize;
 	let request = supabase
@@ -306,6 +349,8 @@ export async function fetchAuditLogPage({
 		.select("*", { count: "exact" });
 
 	if (filter !== "all") request = request.eq("to_status", filter);
+	if (venueId !== "all") request = request.eq("venue_id", venueId);
+	if (bookingDate) request = request.eq("booking_date", bookingDate);
 
 	const search = buildSearchFilter(
 		[
@@ -339,17 +384,17 @@ export async function countAuditLogEntries() {
 	return count ?? 0;
 }
 
-export type UserFilter = "all" | "admin" | "booker" | "inactive";
-
 export async function fetchUsersPage({
 	page,
 	pageSize,
 	filter,
+	status,
 	query,
 }: {
 	page: number;
 	pageSize: number;
 	filter: UserFilter;
+	status: UserStatusFilter;
 	query: string;
 }): Promise<PageResult<Profile>> {
 	const from = (page - 1) * pageSize;
@@ -357,7 +402,8 @@ export async function fetchUsersPage({
 
 	if (filter === "admin") request = request.eq("role", "admin");
 	if (filter === "booker") request = request.eq("role", "booker");
-	if (filter === "inactive") request = request.eq("is_active", false);
+	if (status === "active") request = request.eq("is_active", true);
+	if (status === "inactive") request = request.eq("is_active", false);
 
 	const search = buildSearchFilter(
 		["email", "full_name", "organization", "phone"],
@@ -403,10 +449,14 @@ export async function fetchOutboxPage({
 	page,
 	pageSize,
 	filter,
+	template,
+	query,
 }: {
 	page: number;
 	pageSize: number;
 	filter: OutboxFilter;
+	template: OutboxTemplateFilter;
+	query: string;
 }): Promise<PageResult<NotificationOutboxItem>> {
 	const from = (page - 1) * pageSize;
 	let request = supabase
@@ -414,6 +464,13 @@ export async function fetchOutboxPage({
 		.select("*", { count: "exact" });
 
 	if (filter !== "all") request = request.eq("status", filter);
+	if (template !== "all") request = request.eq("template", template);
+
+	const search = buildSearchFilter(
+		["recipient_email", "recipient_name"],
+		query,
+	);
+	if (search) request = request.or(search);
 
 	const { data, error, count } = await request
 		.order("created_at", { ascending: false })
@@ -428,7 +485,7 @@ export async function fetchOutboxPage({
 }
 
 export async function fetchOutboxCounts() {
-	const [all, pending, sent, failed] = await Promise.all([
+	const [all, pending, sent, failed, cancelled] = await Promise.all([
 		supabase
 			.from("notification_outbox")
 			.select("id", { count: "exact", head: true }),
@@ -444,17 +501,23 @@ export async function fetchOutboxCounts() {
 			.from("notification_outbox")
 			.select("id", { count: "exact", head: true })
 			.eq("status", "failed"),
+		supabase
+			.from("notification_outbox")
+			.select("id", { count: "exact", head: true })
+			.eq("status", "cancelled"),
 	]);
 
 	if (all.error) throw all.error;
 	if (pending.error) throw pending.error;
 	if (sent.error) throw sent.error;
 	if (failed.error) throw failed.error;
+	if (cancelled.error) throw cancelled.error;
 
 	return {
 		all: all.count ?? 0,
 		pending: pending.count ?? 0,
 		sent: sent.count ?? 0,
 		failed: failed.count ?? 0,
+		cancelled: cancelled.count ?? 0,
 	};
 }

@@ -10,7 +10,7 @@ export type EmailTemplate =
 	| "booker_booking_rejected"
 	| "booker_booking_cancelled";
 
-export type NotificationStatus = "pending" | "sent" | "failed";
+export type NotificationStatus = "pending" | "sent" | "failed" | "cancelled";
 
 export interface Profile {
 	id: string;

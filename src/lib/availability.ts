@@ -21,6 +21,7 @@ export function availabilityConflicts(
 	endTime?: string | null,
 ) {
 	if (entry.kind === "school_event") return true;
+	if (entry.kind === "booking" && entry.status !== "approved") return false;
 
 	const entryStart = normalizedTime(entry.start_time);
 	const entryEnd = normalizedTime(entry.end_time);
