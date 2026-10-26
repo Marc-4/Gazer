@@ -38,6 +38,7 @@ export const notificationStatus = pgEnum("notification_status", [
 	"pending",
 	"sent",
 	"failed",
+	"cancelled",
 ]);
 
 /**
@@ -69,6 +70,10 @@ export const profiles = pgTable(
 			.on(sql`lower(${table.email})`)
 			.where(sql`${table.email} is not null`),
 		index("profiles_role_idx").on(table.role).where(sql`${table.isActive}`),
+		index("profiles_created_at_id_idx").on(
+			table.createdAt.desc(),
+			table.id.desc(),
+		),
 	],
 );
 
@@ -137,6 +142,7 @@ export const schoolEvents = pgTable(
 	},
 	(table) => [
 		index("school_events_date_idx").on(table.eventDate),
+		index("school_events_venue_date_idx").on(table.venueId, table.eventDate),
 		check(
 			"school_events_title_not_blank",
 			sql`length(trim(${table.title})) > 0`,
@@ -152,10 +158,11 @@ export const schoolEvents = pgTable(
  * School activity booking request.
  *
  * `user_id` references `auth.users`, added in the Supabase custom migration.
- * The availability rule is enforced by the `bookings_no_overlap` exclusion
- * constraint in the Supabase migration: pending/approved bookings may not
- * overlap in time for the same venue. Bookings without times reserve the whole
- * date, and school events always reserve the whole date.
+ * The availability rule is enforced in the Supabase migration: approved
+ * bookings may not overlap in time for the same venue, and a new pending
+ * request cannot overlap an approved booking. Pending requests may overlap
+ * each other and are resolved by an administrator. Bookings without times
+ * reserve the whole date, and school events always reserve the whole date.
  */
 export const bookings = pgTable(
 	"bookings",
@@ -199,8 +206,19 @@ export const bookings = pgTable(
 	},
 	(table) => [
 		index("bookings_venue_date_idx").on(table.venueId, table.bookingDate),
-		index("bookings_user_id_idx").on(table.userId),
-		index("bookings_status_idx").on(table.status),
+		index("bookings_created_at_id_idx").on(
+			table.createdAt.desc(),
+			table.id.desc(),
+		),
+		index("bookings_status_created_at_id_idx").on(
+			table.status,
+			table.createdAt.desc(),
+			table.id.desc(),
+		),
+		index("bookings_user_date_idx").on(table.userId, table.bookingDate.desc()),
+		index("bookings_active_date_venue_idx")
+			.on(table.bookingDate, table.venueId)
+			.where(sql`${table.status} in ('pending', 'approved')`),
 		index("bookings_requester_email_lower_idx").on(
 			sql`lower(${table.requesterEmail})`,
 		),
@@ -254,6 +272,10 @@ export const bookingStatusHistory = pgTable(
 		index("booking_status_history_booking_id_idx").on(
 			table.bookingId,
 			table.createdAt.desc(),
+		),
+		index("booking_status_history_created_at_id_idx").on(
+			table.createdAt.desc(),
+			table.id.desc(),
 		),
 	],
 );
@@ -390,6 +412,15 @@ export const notificationOutbox = pgTable(
 			.on(table.scheduledFor, table.createdAt)
 			.where(sql`${table.status} = 'pending'`),
 		index("notification_outbox_booking_id_idx").on(table.bookingId),
+		index("notification_outbox_created_at_id_idx").on(
+			table.createdAt.desc(),
+			table.id.desc(),
+		),
+		index("notification_outbox_status_created_at_id_idx").on(
+			table.status,
+			table.createdAt.desc(),
+			table.id.desc(),
+		),
 		check(
 			"notification_outbox_recipient_format",
 			sql`${table.recipientEmail} ~* '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$'`,
