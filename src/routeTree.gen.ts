@@ -32,6 +32,7 @@ import { Route as DashboardBookingsRouteImport } from './routes/dashboard.bookin
 import { Route as ApiAdminUsersRouteImport } from './routes/api/admin/users'
 import { Route as ApiBookingsEnsureUserRouteImport } from './routes/api/bookings/ensure-user'
 import { Route as ApiNotificationsDispatchRouteImport } from './routes/api/notifications/dispatch'
+import { Route as ApiNotificationsOutboxRouteImport } from './routes/api/notifications/outbox'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -149,6 +150,11 @@ const ApiNotificationsDispatchRoute =
     path: '/api/notifications/dispatch',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiNotificationsOutboxRoute = ApiNotificationsOutboxRouteImport.update({
+  id: '/api/notifications/outbox',
+  path: '/api/notifications/outbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/users': typeof ApiAdminUsersRoute
   '/api/bookings/ensure-user': typeof ApiBookingsEnsureUserRoute
   '/api/notifications/dispatch': typeof ApiNotificationsDispatchRoute
+  '/api/notifications/outbox': typeof ApiNotificationsOutboxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/api/admin/users': typeof ApiAdminUsersRoute
   '/api/bookings/ensure-user': typeof ApiBookingsEnsureUserRoute
   '/api/notifications/dispatch': typeof ApiNotificationsDispatchRoute
+  '/api/notifications/outbox': typeof ApiNotificationsOutboxRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/api/admin/users': typeof ApiAdminUsersRoute
   '/api/bookings/ensure-user': typeof ApiBookingsEnsureUserRoute
   '/api/notifications/dispatch': typeof ApiNotificationsDispatchRoute
+  '/api/notifications/outbox': typeof ApiNotificationsOutboxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/bookings/ensure-user'
     | '/api/notifications/dispatch'
+    | '/api/notifications/outbox'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/bookings/ensure-user'
     | '/api/notifications/dispatch'
+    | '/api/notifications/outbox'
   id:
     | '__root__'
     | '/'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/api/admin/users'
     | '/api/bookings/ensure-user'
     | '/api/notifications/dispatch'
+    | '/api/notifications/outbox'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -313,6 +325,7 @@ export interface RootRouteChildren {
   ApiAdminUsersRoute: typeof ApiAdminUsersRoute
   ApiBookingsEnsureUserRoute: typeof ApiBookingsEnsureUserRoute
   ApiNotificationsDispatchRoute: typeof ApiNotificationsDispatchRoute
+  ApiNotificationsOutboxRoute: typeof ApiNotificationsOutboxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -478,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNotificationsDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/notifications/outbox': {
+      id: '/api/notifications/outbox'
+      path: '/api/notifications/outbox'
+      fullPath: '/api/notifications/outbox'
+      preLoaderRoute: typeof ApiNotificationsOutboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -534,6 +554,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminUsersRoute: ApiAdminUsersRoute,
   ApiBookingsEnsureUserRoute: ApiBookingsEnsureUserRoute,
   ApiNotificationsDispatchRoute: ApiNotificationsDispatchRoute,
+  ApiNotificationsOutboxRoute: ApiNotificationsOutboxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
