@@ -21,6 +21,11 @@ const booking: AvailabilityEntry = {
 	label: null,
 };
 
+const pendingBooking: AvailabilityEntry = {
+	...booking,
+	status: "pending",
+};
+
 const schoolEvent: AvailabilityEntry = {
 	venue_id: "venue-1",
 	venue_name: "Main hall",
@@ -84,6 +89,25 @@ describe("AvailabilityCalendar", () => {
 
 		expect(
 			await screen.findByText("Already held during the selected time."),
+		).toBeInTheDocument();
+	});
+
+	it("allows a new request to overlap a pending request", async () => {
+		rpc.mockResolvedValue({ data: [pendingBooking], error: null });
+
+		render(
+			<AvailabilityCalendar
+				selectedDate={todayIsoDate()}
+				selectedStartTime="09:30"
+				selectedEndTime="10:30"
+				onSelectDate={() => undefined}
+			/>,
+		);
+
+		expect(
+			await screen.findByText(
+				"Available. Admins will review pending requests on a case by case basis.",
+			),
 		).toBeInTheDocument();
 	});
 
