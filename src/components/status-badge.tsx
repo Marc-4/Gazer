@@ -19,6 +19,8 @@ const notificationStyles: Record<NotificationStatus, string> = {
 	sent: "border-emerald-300/60 bg-emerald-100 text-emerald-900 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-200",
 	failed:
 		"border-rose-300/60 bg-rose-100 text-rose-900 dark:border-rose-400/30 dark:bg-rose-400/15 dark:text-rose-200",
+	cancelled:
+		"border-slate-300/60 bg-slate-100 text-slate-700 dark:border-slate-400/30 dark:bg-slate-400/15 dark:text-slate-200",
 };
 
 const labels: Record<string, string> = {

@@ -60,7 +60,7 @@ const chipStyles: Record<AvailabilityTone, string> = {
 
 const legend: Array<{ tone: AvailabilityTone; label: string }> = [
 	{ tone: "free", label: "Available" },
-	{ tone: "pending", label: "Pending" },
+	{ tone: "pending", label: "Pending request" },
 	{ tone: "approved", label: "Booked" },
 	{ tone: "school", label: "School event" },
 ];
@@ -417,9 +417,11 @@ export function AvailabilityCalendar({
 											: selectedStartTime && selectedEndTime
 												? "Already held during the selected time."
 												: "Already held by another booking."
-										: selectedEntries.length > 0
-											? "Available for the selected time."
-											: "Available for a new booking."}
+										: selectedTone === "pending"
+											? "Available. Admins will review pending requests on a case by case basis."
+											: selectedEntries.length > 0
+												? "Available for the selected time."
+												: "Available for a new booking."}
 								</p>
 							</div>
 							<span
