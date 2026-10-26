@@ -71,6 +71,27 @@
       "when": 1792852800000,
       "tag": "20261024220000_enable_realtime",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792973665585,
+      "tag": "20261026001425_add_cancelled_notification_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792977835873,
+      "tag": "20261026012355_relax_booking_overlap",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792978541239,
+      "tag": "20261026013541_relax_booking_overlap_again",
+      "breakpoints": true
     }
   ]
 }
