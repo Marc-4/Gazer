@@ -24,8 +24,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [session, setSession] = useState<Session | null>(null);
-	const [profile, setProfile] = useState<Profile | null>(null);
+	const [sessionReady, setSessionReady] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
 	const fetchProfile = useCallback(async (userId: string) => {
 		const { data, error } = await supabase
@@ -43,56 +45,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	useEffect(() => {
-		let active = true;
+			let active = true;
 
-		supabase.auth.getSession().then(({ data }) => {
-			if (!active) return;
-			setSession(data.session);
-			if (!data.session) {
-				setLoading(false);
-			}
-		});
-
-		const {
-			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, nextSession) => {
-			if (!active) return;
-			setSession(nextSession);
-			if (!nextSession) {
-				setProfile(null);
-				setLoading(false);
-			}
-		});
-
-		return () => {
-			active = false;
-			subscription.unsubscribe();
-		};
-	}, []);
-
-	useEffect(() => {
-		const userId = session?.user.id;
-		if (!userId) {
-			setProfile(null);
-			setLoading(false);
-			return;
-		}
-
-		let active = true;
-		setLoading(true);
-
-		fetchProfile(userId)
-			.then((nextProfile) => {
-				if (active) setProfile(nextProfile);
-			})
-			.finally(() => {
-				if (active) setLoading(false);
+			supabase.auth.getSession().then(({ data }) => {
+				if (!active) return;
+				setSession(data.session);
+				setSessionReady(true); // <-- no setLoading(false) here anymore
 			});
 
-		return () => {
-			active = false;
-		};
-	}, [session?.user.id, fetchProfile]);
+			const {
+				data: { subscription },
+			} = supabase.auth.onAuthStateChange((event, nextSession) => {
+				if (!active || (event === "INITIAL_SESSION" && !nextSession)) return;
+				setSession(nextSession);
+				setSessionReady(true);
+				if (!nextSession) {
+					setProfile(null);
+					setLoading(false);
+					return;
+				}
+				if (event === "SIGNED_IN") {
+					setProfileRefreshKey((key) => key + 1);
+				}
+			});
+
+			return () => {
+				active = false;
+				subscription.unsubscribe();
+			};
+		}, []);
+
+		useEffect(() => {
+			if (!sessionReady) return; // <-- wait until we actually know
+
+			const userId = session?.user.id;
+			if (!userId) {
+				setProfile(null);
+				setLoading(false);
+				return;
+			}
+
+			let active = true;
+			fetchProfile(userId)
+				.then((nextProfile) => {
+					if (active) setProfile(nextProfile);
+				})
+				.finally(() => {
+					if (active) setLoading(false);
+				});
+
+			return () => {
+				active = false;
+			};
+		}, [sessionReady, session?.user.id, profileRefreshKey, fetchProfile]);
 
 	const refreshProfile = useCallback(async () => {
 		const userId = session?.user.id;
