@@ -323,8 +323,7 @@ function VenueDialog({
 								</p>
 							) : (
 								<p className="text-xs text-muted-foreground">
-									Lowercase identifier used in links. Generated from the name
-									after you pause typing.
+									Lowercase identifier used in links.
 								</p>
 							)}
 						</div>
