@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "#/components/data-pagination";
 import { EmptyState } from "#/components/empty-state";
+import { FilterSelect } from "#/components/filter-select";
 import { PageHeader } from "#/components/page-header";
 import {
 	AlertDialog,
@@ -24,7 +25,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "#/components/ui/alert-dialog";
-import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
 	Card,
@@ -74,7 +74,7 @@ import {
 	type SchoolEventFilter,
 } from "#/lib/admin-queries";
 import {
-    DEFAULT_END_TIME,
+	DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	formatDate,
 	formatTimeRange,
@@ -407,6 +407,8 @@ function AdminEvents() {
 	const [loading, setLoading] = useState(true);
 	const [filter, setFilter] = useState<SchoolEventFilter>("upcoming");
 	const [query, setQuery] = useState("");
+	const [venueFilter, setVenueFilter] = useState("all");
+	const [eventDateFilter, setEventDateFilter] = useState("");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
 	const [total, setTotal] = useState(0);
@@ -452,6 +454,8 @@ function AdminEvents() {
 				pageSize,
 				filter,
 				query: debouncedQuery,
+				venueId: venueFilter,
+				eventDate: eventDateFilter,
 			}),
 			fetchSchoolEventCounts(),
 		])
@@ -481,7 +485,15 @@ function AdminEvents() {
 		return () => {
 			active = false;
 		};
-	}, [page, pageSize, filter, debouncedQuery, refreshKey]);
+	}, [
+		page,
+		pageSize,
+		filter,
+		debouncedQuery,
+		venueFilter,
+		eventDateFilter,
+		refreshKey,
+	]);
 
 	const refresh = () => setRefreshKey((key) => key + 1);
 
@@ -545,19 +557,48 @@ function AdminEvents() {
 							/>
 						</div>
 					</div>
-					<Tabs
-						value={filter}
-						onValueChange={(value) => {
-							setFilter(value as SchoolEventFilter);
-							setPage(1);
-						}}
-					>
-						<TabsList>
-							<TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-							<TabsTrigger value="all">All</TabsTrigger>
-							<TabsTrigger value="past">Past</TabsTrigger>
-						</TabsList>
-					</Tabs>
+					<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+						<Tabs
+							value={filter}
+							onValueChange={(value) => {
+								setFilter(value as SchoolEventFilter);
+								setPage(1);
+							}}
+						>
+							<TabsList>
+								<TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+								<TabsTrigger value="all">All</TabsTrigger>
+								<TabsTrigger value="past">Past</TabsTrigger>
+							</TabsList>
+						</Tabs>
+						<div className="flex flex-wrap items-center gap-2">
+							<FilterSelect
+								value={venueFilter}
+								onValueChange={(value) => {
+									setVenueFilter(value);
+									setPage(1);
+								}}
+								options={[
+									{ value: "all", label: "All venues" },
+									...venues.map((venue) => ({
+										value: venue.id,
+										label: venue.name,
+									})),
+								]}
+								ariaLabel="Filter school events by venue"
+							/>
+							<Input
+								type="date"
+								value={eventDateFilter}
+								onChange={(event) => {
+									setEventDateFilter(event.target.value);
+									setPage(1);
+								}}
+								aria-label="Filter school events by event date"
+								className="w-full sm:w-44"
+							/>
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{loading ? (
@@ -579,7 +620,7 @@ function AdminEvents() {
 									? venues.length === 0
 										? "Create a venue first, then reserve it for a school event."
 										: "Reserve a venue for a school event to block regular bookings on that date."
-									: "Try a different date filter or search term."
+									: "Try a different filter or search term."
 							}
 							action={
 								venues.length > 0 ? (
@@ -604,7 +645,6 @@ function AdminEvents() {
 										<TableHead>Venue</TableHead>
 										<TableHead>Date</TableHead>
 										<TableHead>Time</TableHead>
-										<TableHead>Priority</TableHead>
 										<TableHead className="text-right">Actions</TableHead>
 									</TableRow>
 								</TableHeader>
@@ -657,14 +697,6 @@ function AdminEvents() {
 												>
 													{eventTimeLabel(event)}
 												</Link>
-											</TableCell>
-											<TableCell>
-												<Badge
-													variant="outline"
-													className="border-[#f0c75e]/70 bg-[#f0c75e]/15 text-[#7a5709] dark:text-[#f0c75e]"
-												>
-													Top priority
-												</Badge>
 											</TableCell>
 											<TableCell className="text-right">
 												<DropdownMenu>

@@ -1,11 +1,5 @@
-import {
-	createFileRoute,
-	Link,
-	Outlet,
-	useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
-import { useEffect } from "react";
 import { buttonVariants } from "#/components/ui/button";
 import { Card, CardContent } from "#/components/ui/card";
 import { Skeleton } from "#/components/ui/skeleton";
@@ -15,14 +9,7 @@ import { cn } from "#/lib/utils";
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
 
 function AdminLayout() {
-	const navigate = useNavigate();
 	const { user, profile, loading, isAdmin } = useAuth();
-
-	useEffect(() => {
-		if (!loading && !user) {
-			navigate({ to: "/login", search: { redirect: "/admin" }, replace: true });
-		}
-	}, [loading, user, navigate]);
 
 	if (loading) {
 		return (

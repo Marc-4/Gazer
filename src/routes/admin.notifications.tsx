@@ -1,9 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Mail, RefreshCw, RotateCcw, Send } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+	Ban,
+	Loader2,
+	Mail,
+	RefreshCw,
+	RotateCcw,
+	Search,
+	Send,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "#/components/data-pagination";
 import { EmptyState } from "#/components/empty-state";
+import { FilterSelect } from "#/components/filter-select";
 import { PageHeader } from "#/components/page-header";
 import { NotificationStatusBadge } from "#/components/status-badge";
 import { Button } from "#/components/ui/button";
@@ -14,6 +23,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "#/components/ui/card";
+import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { Skeleton } from "#/components/ui/skeleton";
 import {
@@ -29,10 +39,12 @@ import {
 	fetchOutboxCounts,
 	fetchOutboxPage,
 	type OutboxFilter,
+	type OutboxTemplateFilter,
 } from "#/lib/admin-queries";
 import { emailTemplateLabel, formatDateTime } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type { NotificationOutboxItem } from "#/lib/types";
+import { useDebouncedValue } from "#/lib/use-debounced-value";
 import { useNotificationOutboxRealtime } from "#/lib/use-realtime";
 
 export const Route = createFileRoute("/admin/notifications")({
@@ -44,6 +56,15 @@ const filters: Array<{ value: OutboxFilter; label: string }> = [
 	{ value: "pending", label: "Pending" },
 	{ value: "sent", label: "Sent" },
 	{ value: "failed", label: "Failed" },
+	{ value: "cancelled", label: "Cancelled" },
+];
+
+const templateFilters: Array<{ value: OutboxTemplateFilter; label: string }> = [
+	{ value: "all", label: "All templates" },
+	...Object.entries(emailTemplateLabel).map(([value, label]) => ({
+		value: value as OutboxTemplateFilter,
+		label,
+	})),
 ];
 
 interface DispatchResponse {
@@ -59,6 +80,9 @@ function AdminNotifications() {
 	const [items, setItems] = useState<NotificationOutboxItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [filter, setFilter] = useState<OutboxFilter>("all");
+	const [templateFilter, setTemplateFilter] =
+		useState<OutboxTemplateFilter>("all");
+	const [query, setQuery] = useState("");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
 	const [total, setTotal] = useState(0);
@@ -67,12 +91,18 @@ function AdminNotifications() {
 		pending: 0,
 		sent: 0,
 		failed: 0,
+		cancelled: 0,
 	});
 	const [refreshKey, setRefreshKey] = useState(0);
 	const [dispatching, setDispatching] = useState<"send" | "retry" | null>(null);
+	const [acting, setActing] = useState<{
+		id: string;
+		action: "send" | "cancel" | "requeue";
+	} | null>(null);
 	const [automaticEmails, setAutomaticEmails] = useState(false);
 	const [loadingSettings, setLoadingSettings] = useState(true);
 	const [savingSettings, setSavingSettings] = useState(false);
+	const debouncedQuery = useDebouncedValue(query);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey intentionally retriggers the query after dispatch.
 	useEffect(() => {
@@ -80,7 +110,13 @@ function AdminNotifications() {
 		setLoading(true);
 
 		Promise.all([
-			fetchOutboxPage({ page, pageSize, filter }),
+			fetchOutboxPage({
+				page,
+				pageSize,
+				filter,
+				template: templateFilter,
+				query: debouncedQuery,
+			}),
 			fetchOutboxCounts(),
 		])
 			.then(([result, nextCounts]) => {
@@ -106,7 +142,7 @@ function AdminNotifications() {
 		return () => {
 			active = false;
 		};
-	}, [page, pageSize, filter, refreshKey]);
+	}, [page, pageSize, filter, templateFilter, debouncedQuery, refreshKey]);
 
 	const loadSettings = useCallback(async () => {
 		const { data, error } = await supabase
@@ -129,7 +165,23 @@ function AdminNotifications() {
 		loadSettings();
 	}, [loadSettings]);
 
-	const refresh = () => setRefreshKey((key) => key + 1);
+	const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const refresh = useCallback(() => {
+		// Coalesce bursts (manual refresh + realtime event) into a single refetch.
+		if (refreshTimer.current) clearTimeout(refreshTimer.current);
+		refreshTimer.current = setTimeout(() => {
+			refreshTimer.current = null;
+			setRefreshKey((key) => key + 1);
+		}, 300);
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (refreshTimer.current) clearTimeout(refreshTimer.current);
+		};
+	}, []);
+
 	useNotificationOutboxRealtime(refresh);
 
 	const toggleAutomaticEmails = async (enabled: boolean) => {
@@ -190,13 +242,109 @@ function AdminNotifications() {
 			toast.success(
 				`Processed ${payload.processed ?? 0} · sent ${payload.sent ?? 0} · retrying ${payload.skipped ?? 0} · failed ${payload.failed ?? 0}`,
 			);
-			refresh();
+			// refresh();
 		} catch (error) {
 			toast.error(
 				error instanceof Error ? error.message : "Dispatch request failed.",
 			);
 		} finally {
 			setDispatching(null);
+		}
+	};
+
+	const sendItem = async (item: NotificationOutboxItem) => {
+		setActing({ id: item.id, action: "send" });
+		try {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
+
+			if (!session) {
+				toast.error("Your session has expired. Please sign in again.");
+				return;
+			}
+
+			const response = await fetch(
+				`/api/notifications/dispatch?id=${encodeURIComponent(item.id)}`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${session.access_token}`,
+					},
+				},
+			);
+
+			const payload = (await response
+				.json()
+				.catch(() => ({}))) as DispatchResponse;
+
+			if (!response.ok) {
+				toast.error(payload.error ?? "Unable to send the notification.");
+				return;
+			}
+
+			if ((payload.sent ?? 0) === 0) {
+				toast.error(
+					"The notification could not be sent. Check its delivery details.",
+				);
+			} else {
+				toast.success("Notification sent");
+			}
+			// refresh();
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Send request failed.",
+			);
+		} finally {
+			setActing(null);
+		}
+	};
+
+	const updateItemStatus = async (
+		item: NotificationOutboxItem,
+		action: "cancel" | "requeue",
+	) => {
+		setActing({ id: item.id, action });
+		try {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
+
+			if (!session) {
+				toast.error("Your session has expired. Please sign in again.");
+				return;
+			}
+
+			const response = await fetch("/api/notifications/outbox", {
+				method: "PATCH",
+				headers: {
+					Authorization: `Bearer ${session.access_token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ id: item.id, action }),
+			});
+
+			const payload = (await response.json().catch(() => ({}))) as {
+				error?: string;
+			};
+
+			if (!response.ok) {
+				toast.error(payload.error ?? "Unable to update the notification.");
+				return;
+			}
+
+			toast.success(
+				action === "cancel"
+					? "Notification cancelled"
+					: "Notification queued again",
+			);
+			// refresh();
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Update request failed.",
+			);
+		} finally {
+			setActing(null);
 		}
 	};
 
@@ -222,7 +370,7 @@ function AdminNotifications() {
 								variant="outline"
 								size="sm"
 								onClick={() => dispatch(true)}
-								disabled={Boolean(dispatching)}
+								disabled={Boolean(dispatching) || Boolean(acting)}
 							>
 								<RotateCcw className="size-4" />
 								{dispatching === "retry"
@@ -233,7 +381,9 @@ function AdminNotifications() {
 						<Button
 							size="sm"
 							onClick={() => dispatch(false)}
-							disabled={Boolean(dispatching) || counts.pending === 0}
+							disabled={
+								Boolean(dispatching) || Boolean(acting) || counts.pending === 0
+							}
 						>
 							<Send className="size-4" />
 							{dispatching === "send"
@@ -280,27 +430,53 @@ function AdminNotifications() {
 						</CardTitle>
 						<CardDescription>
 							{total} matching · {counts.all} total · {counts.pending} pending ·{" "}
-							{counts.sent} sent · {counts.failed} failed
+							{counts.sent} sent · {counts.failed} failed · {counts.cancelled}{" "}
+							cancelled
 						</CardDescription>
 					</div>
-					<Tabs
-						value={filter}
-						onValueChange={(value) => {
-							setFilter(value as OutboxFilter);
-							setPage(1);
-						}}
-					>
-						<TabsList className="w-full justify-start overflow-x-auto">
-							{filters.map((item) => (
-								<TabsTrigger key={item.value} value={item.value}>
-									{item.label}
-									<span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-										{counts[item.value]}
-									</span>
-								</TabsTrigger>
-							))}
-						</TabsList>
-					</Tabs>
+					<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+						<Tabs
+							value={filter}
+							onValueChange={(value) => {
+								setFilter(value as OutboxFilter);
+								setPage(1);
+							}}
+						>
+							<TabsList className="w-full justify-start overflow-x-auto xl:w-auto">
+								{filters.map((item) => (
+									<TabsTrigger key={item.value} value={item.value}>
+										{item.label}
+										<span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+											{counts[item.value]}
+										</span>
+									</TabsTrigger>
+								))}
+							</TabsList>
+						</Tabs>
+						<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+							<FilterSelect
+								value={templateFilter}
+								onValueChange={(value) => {
+									setTemplateFilter(value as OutboxTemplateFilter);
+									setPage(1);
+								}}
+								options={templateFilters}
+								ariaLabel="Filter outbox by email template"
+							/>
+							<div className="relative w-full sm:w-64">
+								<Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+								<Input
+									value={query}
+									onChange={(event) => {
+										setQuery(event.target.value);
+										setPage(1);
+									}}
+									placeholder="Search recipient…"
+									className="pl-9"
+								/>
+							</div>
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{loading ? (
@@ -313,7 +489,7 @@ function AdminNotifications() {
 						<EmptyState
 							icon={Mail}
 							title="No notifications"
-							description="Emails appear here when bookings are created or their status changes."
+							description="Try a different status or template filter, or search term."
 						/>
 					) : (
 						<div className="overflow-x-auto">
@@ -326,6 +502,7 @@ function AdminNotifications() {
 										<TableHead>Attempts</TableHead>
 										<TableHead>Created</TableHead>
 										<TableHead>Delivery</TableHead>
+										<TableHead className="text-right">Actions</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -383,6 +560,63 @@ function AdminNotifications() {
 														Queued {formatDateTime(item.scheduled_for)}
 													</p>
 												)}
+											</TableCell>
+											<TableCell>
+												<div className="flex justify-end gap-1">
+													{item.status === "pending" ? (
+														<>
+															<Button
+																variant="outline"
+																size="icon-xs"
+																title="Send now"
+																aria-label={`Send notification to ${item.recipient_email}`}
+																onClick={() => sendItem(item)}
+																disabled={
+																	Boolean(acting) || Boolean(dispatching)
+																}
+															>
+																{acting?.id === item.id &&
+																acting.action === "send" ? (
+																	<Loader2 className="animate-spin" />
+																) : (
+																	<Send />
+																)}
+															</Button>
+															<Button
+																variant="ghost"
+																size="icon-xs"
+																title="Cancel notification"
+																aria-label={`Cancel notification to ${item.recipient_email}`}
+																onClick={() => updateItemStatus(item, "cancel")}
+																disabled={
+																	Boolean(acting) || Boolean(dispatching)
+																}
+															>
+																{acting?.id === item.id &&
+																acting.action === "cancel" ? (
+																	<Loader2 className="animate-spin" />
+																) : (
+																	<Ban />
+																)}
+															</Button>
+														</>
+													) : item.status === "cancelled" ? (
+														<Button
+															variant="outline"
+															size="xs"
+															onClick={() => updateItemStatus(item, "requeue")}
+															disabled={Boolean(acting) || Boolean(dispatching)}
+														>
+															{acting?.id === item.id &&
+															acting.action === "requeue" ? (
+																<Loader2 className="animate-spin" />
+															) : (
+																<RotateCcw />
+															)}
+															Requeue
+														</Button>
+													) : null}
+												</div>
 											</TableCell>
 										</TableRow>
 									))}

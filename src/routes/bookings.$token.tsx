@@ -428,9 +428,10 @@ function BookingStatusPage() {
 					<Card className="border-border/70">
 						<CardContent className="pt-6">
 							<p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-								<MapPin className="mt-0.5 size-4 shrink-0" />
-								Only one active booking can occupy a venue on a given date. If
-								you need a different date, submit a new request.
+								<MapPin className="mt-0.5 size-4 shrink-0" />A venue can host
+								one approved booking per time slot. Pending requests may overlap
+								until an administrator approves one, so submit a new request if
+								you need a different time or date.
 							</p>
 						</CardContent>
 					</Card>

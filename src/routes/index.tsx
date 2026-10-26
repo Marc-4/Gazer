@@ -75,8 +75,9 @@ function Home() {
 					</h1>
 					<p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
 						Choose a space, pick a date, and submit a request. Each venue can
-						host one active booking per calendar date, unless a school event has
-						reserved it.
+						host one approved booking per time slot. Pending requests may
+						overlap until an administrator approves one, and school events
+						reserve the whole date.
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-2">

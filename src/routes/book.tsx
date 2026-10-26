@@ -42,7 +42,7 @@ import {
 } from "#/lib/availability";
 import { bookingUserMessage, ensureBookingUser } from "#/lib/booking-user";
 import {
-    DEFAULT_END_TIME,
+	DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	formatDate,
 	formatTimeRange,
@@ -274,8 +274,8 @@ function BookPage() {
 		if (activeBooking) {
 			setError(
 				hasSelectedTime
-					? "This venue already has an active booking during the selected time. Choose another time, venue, or date."
-					: "This venue already has an active booking on the selected date. Choose another venue or date.",
+					? "This venue already has a confirmed booking during the selected time. Choose another time, venue, or date."
+					: "This venue already has a confirmed booking on the selected date. Choose another venue or date.",
 			);
 			return;
 		}
@@ -346,7 +346,7 @@ function BookPage() {
 			<PageHeader
 				eyebrow="New request"
 				title="Request a venue"
-				description="Tell us about your activity and when you need the space. Overlapping bookings are not allowed; bookings without times reserve the whole date, and school events take priority."
+				description="Tell us about your activity and when you need the space. Approved bookings and school events block requests; other pending requests do not. Bookings without times reserve the whole date."
 			/>
 
 			{openSeason ? (
@@ -726,9 +726,9 @@ function BookPage() {
 												? `Unavailable: this venue is reserved for the school event "${schoolEvent.label ?? "School event"}".`
 												: `Unavailable: this venue is reserved for ${schoolEvents.length} school events on this date.`
 											: activeBooking
-												? `Unavailable: this venue already has a ${activeBooking.status === "approved" ? "confirmed" : "pending"} booking ${hasSelectedTime ? "during the selected time" : "on this date"}.`
+												? `Unavailable: this venue already has a confirmed booking ${hasSelectedTime ? "during the selected time" : "on this date"}.`
 												: openSeason
-													? "Open season is active. If the venue and date are free, this request will be approved automatically."
+													? "Open season is active. This request will be approved automatically unless an approved booking or school event blocks it."
 													: "An administrator will review this request. You will receive an email when the status changes."}
 								</p>
 							</div>

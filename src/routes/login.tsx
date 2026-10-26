@@ -13,6 +13,7 @@ import {
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { useAuth } from "#/lib/auth";
+import { getPostAuthPath } from "#/lib/last-visited-tab";
 import { supabase } from "#/lib/supabase";
 
 const initialAuthHash =
@@ -33,8 +34,9 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
 	const navigate = useNavigate();
-	const { user, loading } = useAuth();
+	const { user, loading, isAdmin } = useAuth();
 	const { redirect } = Route.useSearch();
+	const postAuthPath = getPostAuthPath({ redirect, isAdmin });
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [submitting, setSubmitting] = useState(false);
@@ -56,9 +58,9 @@ function LoginPage() {
 
 	useEffect(() => {
 		if (!loading && user) {
-			navigate({ to: redirect ?? "/dashboard", replace: true });
+			navigate({ to: postAuthPath, replace: true });
 		}
-	}, [loading, user, redirect, navigate]);
+	}, [loading, user, postAuthPath, navigate]);
 
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
@@ -77,7 +79,6 @@ function LoginPage() {
 		}
 
 		toast.success("Welcome back");
-		await navigate({ to: redirect ?? "/dashboard" });
 	};
 
 	return (

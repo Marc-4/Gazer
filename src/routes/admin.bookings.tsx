@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { AvailabilityCalendar } from "#/components/availability-calendar";
 import { DataPagination } from "#/components/data-pagination";
 import { EmptyState } from "#/components/empty-state";
+import { FilterSelect } from "#/components/filter-select";
 import { PageHeader } from "#/components/page-header";
 import { BookingStatusBadge } from "#/components/status-badge";
 import { Button } from "#/components/ui/button";
@@ -57,6 +58,8 @@ import {
 	countBookings,
 	fetchBookingById,
 	fetchBookingsPage,
+	fetchVenueOptions,
+	type VenueOption,
 } from "#/lib/admin-queries";
 import { useAuth } from "#/lib/auth";
 import {
@@ -141,10 +144,10 @@ function mapNewBookingError(error: { code?: string; message?: string }) {
 		return "This venue is reserved for a school event on the selected date. Choose another venue or date.";
 	}
 	if (error.code === "23P01") {
-		return "This venue already has a pending or approved booking during the selected time.";
+		return "This venue already has an approved booking during the selected time.";
 	}
 	if (error.code === "23505") {
-		return "This venue already has a pending or approved booking during the selected time.";
+		return "This venue already has an approved booking during the selected time.";
 	}
 	if (error.code === "23514") {
 		return "Some details are invalid. Check the times, attendee count, and email address.";
@@ -284,8 +287,8 @@ function NewBookingDialog({
 		if (isUnavailable) {
 			setError(
 				hasSelectedTime
-					? "This venue is already reserved during the selected time. Choose another time, venue, or date."
-					: "This venue is already reserved for the selected date. Choose another venue or date.",
+					? "This venue already has an approved booking during the selected time. Choose another time, venue, or date."
+					: "This venue already has an approved booking on the selected date. Choose another venue or date.",
 			);
 			return;
 		}
@@ -379,8 +382,8 @@ function NewBookingDialog({
 					<DialogHeader>
 						<DialogTitle>Create booking</DialogTitle>
 						<DialogDescription>
-							Create a booking on behalf of a requester. Existing availability
-							and school event rules still apply.
+							Create a booking on behalf of a requester. Approved bookings and
+							school events block requests; pending requests do not.
 						</DialogDescription>
 					</DialogHeader>
 
@@ -439,8 +442,8 @@ function NewBookingDialog({
 						{isUnavailable ? (
 							<div className="rounded-lg border border-rose-300/60 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-100">
 								{hasSelectedTime
-									? "This venue is already reserved during the selected time. Choose another time, venue, or date."
-									: "This venue is already reserved for the selected date. Choose another venue or date."}
+									? "This venue already has an approved booking during the selected time. Choose another time, venue, or date."
+									: "This venue already has an approved booking on the selected date. Choose another venue or date."}
 							</div>
 						) : null}
 
@@ -664,6 +667,9 @@ function AdminBookings() {
 	const [loading, setLoading] = useState(true);
 	const [filter, setFilter] = useState<BookingFilter>("all");
 	const [query, setQuery] = useState("");
+	const [venueFilter, setVenueFilter] = useState("all");
+	const [bookingDateFilter, setBookingDateFilter] = useState("");
+	const [venueOptions, setVenueOptions] = useState<VenueOption[]>([]);
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
 	const [total, setTotal] = useState(0);
@@ -677,13 +683,37 @@ function AdminBookings() {
 	const { review } = Route.useSearch();
 	const navigate = Route.useNavigate();
 
+	useEffect(() => {
+		let active = true;
+		fetchVenueOptions()
+			.then((options) => {
+				if (active) setVenueOptions(options);
+			})
+			.catch((error: unknown) => {
+				if (!active) return;
+				toast.error(
+					error instanceof Error ? error.message : "Unable to load venues.",
+				);
+			});
+		return () => {
+			active = false;
+		};
+	}, []);
+
 	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey intentionally retriggers the query after mutations.
 	useEffect(() => {
 		let active = true;
 		setLoading(true);
 
 		Promise.all([
-			fetchBookingsPage({ page, pageSize, filter, query: debouncedQuery }),
+			fetchBookingsPage({
+				page,
+				pageSize,
+				filter,
+				query: debouncedQuery,
+				venueId: venueFilter,
+				bookingDate: bookingDateFilter,
+			}),
 			countBookings(),
 		])
 			.then(([result, allCount]) => {
@@ -709,7 +739,15 @@ function AdminBookings() {
 		return () => {
 			active = false;
 		};
-	}, [page, pageSize, filter, debouncedQuery, refreshKey]);
+	}, [
+		page,
+		pageSize,
+		filter,
+		debouncedQuery,
+		venueFilter,
+		bookingDateFilter,
+		refreshKey,
+	]);
 
 	useEffect(() => {
 		setNote(selected?.decision_note ?? "");
@@ -801,7 +839,7 @@ function AdminBookings() {
 		};
 		toast.success(messages[action]);
 		closeSelected();
-		refresh();
+		// refresh();
 	};
 
 	return (
@@ -842,21 +880,50 @@ function AdminBookings() {
 							/>
 						</div>
 					</div>
-					<Tabs
-						value={filter}
-						onValueChange={(value) => {
-							setFilter(value as BookingFilter);
-							setPage(1);
-						}}
-					>
-						<TabsList className="w-full justify-start overflow-x-auto">
-							{filters.map((item) => (
-								<TabsTrigger key={item.value} value={item.value}>
-									{item.label}
-								</TabsTrigger>
-							))}
-						</TabsList>
-					</Tabs>
+					<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+						<Tabs
+							value={filter}
+							onValueChange={(value) => {
+								setFilter(value as BookingFilter);
+								setPage(1);
+							}}
+						>
+							<TabsList className="w-full justify-start overflow-x-auto xl:w-auto">
+								{filters.map((item) => (
+									<TabsTrigger key={item.value} value={item.value}>
+										{item.label}
+									</TabsTrigger>
+								))}
+							</TabsList>
+						</Tabs>
+						<div className="flex flex-wrap items-center gap-2">
+							<FilterSelect
+								value={venueFilter}
+								onValueChange={(value) => {
+									setVenueFilter(value);
+									setPage(1);
+								}}
+								options={[
+									{ value: "all", label: "All venues" },
+									...venueOptions.map((venue) => ({
+										value: venue.id,
+										label: venue.name,
+									})),
+								]}
+								ariaLabel="Filter bookings by venue"
+							/>
+							<Input
+								type="date"
+								value={bookingDateFilter}
+								onChange={(event) => {
+									setBookingDateFilter(event.target.value);
+									setPage(1);
+								}}
+								aria-label="Filter bookings by booking date"
+								className="w-full sm:w-44"
+							/>
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{loading ? (
@@ -872,7 +939,7 @@ function AdminBookings() {
 							description={
 								totalAll === 0
 									? "New booking requests will appear here."
-									: "Try a different status filter or search term."
+									: "Try a different filter or search term."
 							}
 						/>
 					) : (
@@ -996,7 +1063,7 @@ function AdminBookings() {
 				onOpenChange={setCreateOpen}
 				onSaved={() => {
 					setPage(1);
-					refresh();
+					// refresh();
 				}}
 			/>
 

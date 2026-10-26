@@ -4,6 +4,7 @@ import { type FormEvent, type MouseEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "#/components/data-pagination";
 import { EmptyState } from "#/components/empty-state";
+import { FilterSelect } from "#/components/filter-select";
 import { PageHeader } from "#/components/page-header";
 import {
 	AlertDialog,
@@ -55,6 +56,7 @@ import {
 	fetchUserCounts,
 	fetchUsersPage,
 	type UserFilter,
+	type UserStatusFilter,
 } from "#/lib/admin-queries";
 import { useAuth } from "#/lib/auth";
 import { formatDate } from "#/lib/format";
@@ -70,6 +72,11 @@ const filters: Array<{ value: UserFilter; label: string }> = [
 	{ value: "all", label: "All" },
 	{ value: "admin", label: "Admins" },
 	{ value: "booker", label: "Bookers" },
+];
+
+const statusFilters: Array<{ value: UserStatusFilter; label: string }> = [
+	{ value: "all", label: "All statuses" },
+	{ value: "active", label: "Active" },
 	{ value: "inactive", label: "Inactive" },
 ];
 
@@ -109,6 +116,7 @@ function AdminUsers() {
 	const [users, setUsers] = useState<Profile[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [filter, setFilter] = useState<UserFilter>("all");
+	const [statusFilter, setStatusFilter] = useState<UserStatusFilter>("all");
 	const [query, setQuery] = useState("");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
@@ -130,7 +138,13 @@ function AdminUsers() {
 		setLoading(true);
 
 		Promise.all([
-			fetchUsersPage({ page, pageSize, filter, query: debouncedQuery }),
+			fetchUsersPage({
+				page,
+				pageSize,
+				filter,
+				status: statusFilter,
+				query: debouncedQuery,
+			}),
 			fetchUserCounts(),
 		])
 			.then(([result, nextCounts]) => {
@@ -156,7 +170,7 @@ function AdminUsers() {
 		return () => {
 			active = false;
 		};
-	}, [page, pageSize, filter, debouncedQuery, refreshKey]);
+	}, [page, pageSize, filter, statusFilter, debouncedQuery, refreshKey]);
 
 	const refresh = () => setRefreshKey((key) => key + 1);
 
@@ -199,21 +213,32 @@ function AdminUsers() {
 							/>
 						</div>
 					</div>
-					<Tabs
-						value={filter}
-						onValueChange={(value) => {
-							setFilter(value as UserFilter);
-							setPage(1);
-						}}
-					>
-						<TabsList className="w-full justify-start overflow-x-auto">
-							{filters.map((item) => (
-								<TabsTrigger key={item.value} value={item.value}>
-									{item.label}
-								</TabsTrigger>
-							))}
-						</TabsList>
-					</Tabs>
+					<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+						<Tabs
+							value={filter}
+							onValueChange={(value) => {
+								setFilter(value as UserFilter);
+								setPage(1);
+							}}
+						>
+							<TabsList className="w-full justify-start overflow-x-auto xl:w-auto">
+								{filters.map((item) => (
+									<TabsTrigger key={item.value} value={item.value}>
+										{item.label}
+									</TabsTrigger>
+								))}
+							</TabsList>
+						</Tabs>
+						<FilterSelect
+							value={statusFilter}
+							onValueChange={(value) => {
+								setStatusFilter(value as UserStatusFilter);
+								setPage(1);
+							}}
+							options={statusFilters}
+							ariaLabel="Filter users by account status"
+						/>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{loading ? (

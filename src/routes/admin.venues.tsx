@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "#/components/data-pagination";
 import { EmptyState } from "#/components/empty-state";
+import { FilterSelect } from "#/components/filter-select";
 import { PageHeader } from "#/components/page-header";
 import {
 	AlertDialog,
@@ -66,6 +67,7 @@ import {
 	fetchVenueById,
 	fetchVenueCounts,
 	fetchVenuesPage,
+	type VenueCapacityFilter,
 	type VenueFilter,
 } from "#/lib/admin-queries";
 import { slugify } from "#/lib/format";
@@ -412,6 +414,8 @@ function AdminVenues() {
 	);
 	const [loading, setLoading] = useState(true);
 	const [filter, setFilter] = useState<VenueFilter>("all");
+	const [capacityFilter, setCapacityFilter] =
+		useState<VenueCapacityFilter>("all");
 	const [query, setQuery] = useState("");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
@@ -432,7 +436,13 @@ function AdminVenues() {
 		setLoading(true);
 
 		Promise.all([
-			fetchVenuesPage({ page, pageSize, filter, query: debouncedQuery }),
+			fetchVenuesPage({
+				page,
+				pageSize,
+				filter,
+				capacity: capacityFilter,
+				query: debouncedQuery,
+			}),
 			fetchVenueCounts(),
 		])
 			.then(async ([result, counts]) => {
@@ -466,7 +476,7 @@ function AdminVenues() {
 		return () => {
 			active = false;
 		};
-	}, [page, pageSize, filter, debouncedQuery, refreshKey]);
+	}, [page, pageSize, filter, capacityFilter, debouncedQuery, refreshKey]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: navigate is stable; venueParam is the trigger.
 	useEffect(() => {
@@ -596,19 +606,35 @@ function AdminVenues() {
 							/>
 						</div>
 					</div>
-					<Tabs
-						value={filter}
-						onValueChange={(value) => {
-							setFilter(value as VenueFilter);
-							setPage(1);
-						}}
-					>
-						<TabsList>
-							<TabsTrigger value="all">All</TabsTrigger>
-							<TabsTrigger value="active">Active</TabsTrigger>
-							<TabsTrigger value="inactive">Inactive</TabsTrigger>
-						</TabsList>
-					</Tabs>
+					<div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+						<Tabs
+							value={filter}
+							onValueChange={(value) => {
+								setFilter(value as VenueFilter);
+								setPage(1);
+							}}
+						>
+							<TabsList>
+								<TabsTrigger value="all">All</TabsTrigger>
+								<TabsTrigger value="active">Active</TabsTrigger>
+								<TabsTrigger value="inactive">Inactive</TabsTrigger>
+							</TabsList>
+						</Tabs>
+						<FilterSelect
+							value={capacityFilter}
+							onValueChange={(value) => {
+								setCapacityFilter(value as VenueCapacityFilter);
+								setPage(1);
+							}}
+							options={[
+								{ value: "all", label: "Any capacity" },
+								{ value: "small", label: "Under 50" },
+								{ value: "medium", label: "50–100" },
+								{ value: "large", label: "Over 100" },
+							]}
+							ariaLabel="Filter venues by capacity"
+						/>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{loading ? (
@@ -624,7 +650,7 @@ function AdminVenues() {
 							description={
 								totalAll === 0
 									? "Create the first venue so bookers can start submitting requests."
-									: "Try a different status filter or search term."
+									: "Try a different filter or search term."
 							}
 							action={
 								<Button
