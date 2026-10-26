@@ -2,6 +2,11 @@
 
 A Single Page Application (SPA) for booking school-related activities. Organizations and individuals can submit booking requests for a specific venue on a specific date, with optional start and end times, while administrators manage and act on those requests.
 
+Roadmap
+- [ ] user onboarding
+- [ ] spreadsheet import/export
+- [ ] 
+
 ## Features
 
 ### For Bookers
@@ -28,12 +33,12 @@ A Single Page Application (SPA) for booking school-related activities. Organizat
 
 ## How It Works
 
-1. A booker checks the availability calendar, selects a venue, date, and optional times, and submits a booking request. Bookings with times hold only that time range; bookings without times hold the whole date.
+1. A booker checks the availability calendar, selects a venue, date, and optional times, and submits a booking request. Approved bookings with times hold only that time range; approved bookings without times hold the whole date. Pending requests may overlap until reviewed.
 2. The request is stored in Supabase, and a database trigger creates an in-app admin notification for pending requests. The requester email is linked to an existing account, or a new account is invited, so future requests appear in their dashboard.
-3. An admin reviews the request and approves or rejects it, unless **open season** is active. During open season, requests that do not conflict with existing bookings are approved automatically.
+3. An admin reviews the request and approves or rejects it, unless **open season** is active. During open season, requests that do not conflict with an approved booking are approved automatically.
 4. Whenever a request's state changes, the booker is notified by email.
 
-Availability is enforced per venue and time range: two pending or approved bookings cannot overlap at the same venue. If either booking has no start/end time, it reserves the whole date. Administrators can also create **school events**, which take priority over regular bookings: a school event reserves the whole venue/date, cancels conflicting pending/approved bookings, and prevents new bookings for that venue and date. School events may overlap one another at the same venue and date. Deleting an event makes the date bookable again only when no other school event remains, and does not restore bookings that were already cancelled.
+Availability is enforced per venue and time range: approved bookings cannot overlap each other at the same venue, and a new pending request cannot overlap an approved booking. Pending requests may overlap each other until an administrator approves one. If either booking has no start/end time, it reserves the whole date. Administrators can also create **school events**, which take priority over regular bookings: a school event reserves the whole venue/date, cancels conflicting pending/approved bookings, and prevents new bookings for that venue and date. School events may overlap one another at the same venue and date. Deleting an event makes the date bookable again only when no other school event remains, and does not restore bookings that were already cancelled.
 
 ## Tech Stack
 
