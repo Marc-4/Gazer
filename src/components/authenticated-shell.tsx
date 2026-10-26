@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	Building2,
@@ -14,9 +14,10 @@ import {
 	School,
 	Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { AdminNotificationBell } from "#/components/admin-notification-bell";
 import { useAuth } from "#/lib/auth";
+import { setLastVisitedTab } from "#/lib/last-visited-tab";
 
 type AppNavItem = {
 	to:
@@ -62,12 +63,19 @@ const footerLinkClass =
 
 export function AuthenticatedShell({ children }: { children: ReactNode }) {
 	const navigate = useNavigate();
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
 	const { user, profile, isAdmin, signOut } = useAuth();
 	const navItems = isAdmin ? adminNav : bookerNav;
 	const home = isAdmin ? "/admin" : "/dashboard";
 	const initial = (profile?.full_name ?? user?.email ?? "U")
 		.charAt(0)
 		.toUpperCase();
+
+	useEffect(() => {
+		setLastVisitedTab(pathname);
+	}, [pathname]);
 
 	const handleSignOut = async () => {
 		await signOut();
@@ -85,7 +93,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
 						<School className="size-5" />
 					</span>
 					<span className="min-w-0 leading-tight">
-						<span className="block truncate font-[Fraunces,Georgia,serif] text-sm font-bold text-white">
+						<span className="block font-[Fraunces,Georgia,serif] text-sm font-bold text-white">
 							NBSC Activity Booking System
 						</span>
 						<span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-[#f0c75e]">
