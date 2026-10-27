@@ -567,7 +567,7 @@ function AdminNotifications() {
 														<>
 															<Button
 																variant="outline"
-																size="icon-xs"
+																size="icon-sm"
 																title="Send now"
 																aria-label={`Send notification to ${item.recipient_email}`}
 																onClick={() => sendItem(item)}
@@ -583,8 +583,8 @@ function AdminNotifications() {
 																)}
 															</Button>
 															<Button
-																variant="ghost"
-																size="icon-xs"
+																variant="outline"
+																size="icon-sm"
 																title="Cancel notification"
 																aria-label={`Cancel notification to ${item.recipient_email}`}
 																onClick={() => updateItemStatus(item, "cancel")}
