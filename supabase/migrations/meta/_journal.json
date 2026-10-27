@@ -92,6 +92,13 @@
       "when": 1792978541239,
       "tag": "20261026013541_relax_booking_overlap_again",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793065723582,
+      "tag": "20261027014843_disable_booking_cancelled_admin_outbox_notifications",
+      "breakpoints": true
     }
   ]
 }
