@@ -2,14 +2,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	ArrowRight,
 	Building2,
-	CalendarDays,
 	CalendarPlus,
-	CheckCircle2,
 	Clock,
+	type LucideIcon,
+	MapPin,
 	Pencil,
+	Percent,
+	Timer,
+	Users,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SegmentedBar } from "#/components/dashboard-charts";
 import { PageHeader } from "#/components/page-header";
 import { Button, buttonVariants } from "#/components/ui/button";
 import {
@@ -32,9 +36,14 @@ import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useAuth } from "#/lib/auth";
-import { formatDate, formatTimeRange, todayIsoDate } from "#/lib/format";
+import { type BookerDashboard, fetchBookerDashboard } from "#/lib/dashboard";
+import {
+	formatDate,
+	formatDurationMinutes,
+	formatPercent,
+	formatTimeRange,
+} from "#/lib/format";
 import { supabase } from "#/lib/supabase";
-import type { BookingWithVenue } from "#/lib/types";
 import { useBookingsRealtime } from "#/lib/use-realtime";
 import { cn } from "#/lib/utils";
 
@@ -42,10 +51,48 @@ export const Route = createFileRoute("/dashboard/")({
 	component: DashboardPage,
 });
 
+function BookerStatCard({
+	label,
+	value,
+	detail,
+	icon: Icon,
+	tone,
+}: {
+	label: string;
+	value: string;
+	detail: string;
+	icon: LucideIcon;
+	tone: string;
+}) {
+	return (
+		<Card className="border-border/70">
+			<CardContent className="flex items-center justify-between pt-6">
+				<div className="min-w-0">
+					<p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+						{label}
+					</p>
+					<p className="mt-1 truncate font-[Fraunces,Georgia,serif] text-2xl font-bold">
+						{value}
+					</p>
+					<p className="mt-1 truncate text-xs text-muted-foreground">
+						{detail}
+					</p>
+				</div>
+				<span
+					className={cn("grid size-10 place-items-center rounded-xl", tone)}
+				>
+					<Icon className="size-5" />
+				</span>
+			</CardContent>
+		</Card>
+	);
+}
+
 function DashboardPage() {
 	const { user, profile, loading: authLoading, refreshProfile } = useAuth();
-	const [bookings, setBookings] = useState<BookingWithVenue[]>([]);
+	const [data, setData] = useState<BookerDashboard | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [profileOpen, setProfileOpen] = useState(false);
 	const [savingProfile, setSavingProfile] = useState(false);
 	const [profileForm, setProfileForm] = useState({
@@ -54,29 +101,26 @@ function DashboardPage() {
 		phone: "",
 	});
 
-	const loadBookings = useCallback(async () => {
+	const loadDashboard = useCallback(async () => {
 		if (!user) return;
-		const { data, error } = await supabase
-			.from("bookings")
-			.select("*, venue:venues(id, name, address, capacity)")
-			.eq("user_id", user.id)
-			.order("booking_date", { ascending: false });
-
-		if (error) {
-			toast.error(error.message);
+		try {
+			const next = await fetchBookerDashboard();
+			setData(next);
+			setError(null);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Unable to load your dashboard.",
+			);
+		} finally {
 			setLoading(false);
-			return;
 		}
-
-		setBookings((data as BookingWithVenue[] | null) ?? []);
-		setLoading(false);
 	}, [user]);
 
 	useEffect(() => {
-		if (user) loadBookings();
-	}, [user, loadBookings]);
+		if (user) loadDashboard();
+	}, [user, loadDashboard]);
 
-	useBookingsRealtime(loadBookings, Boolean(user));
+	useBookingsRealtime(loadDashboard, Boolean(user));
 
 	useEffect(() => {
 		if (!profile) return;
@@ -87,42 +131,11 @@ function DashboardPage() {
 		});
 	}, [profile]);
 
-	const today = todayIsoDate();
-
-	const stats = useMemo(
-		() => ({
-			total: bookings.length,
-			pending: bookings.filter((booking) => booking.status === "pending")
-				.length,
-			approved: bookings.filter((booking) => booking.status === "approved")
-				.length,
-			upcoming: bookings.filter(
-				(booking) =>
-					booking.booking_date >= today &&
-					(booking.status === "pending" || booking.status === "approved"),
-			).length,
-		}),
-		[bookings, today],
-	);
-
-	const nextBooking = useMemo(
-		() =>
-			bookings
-				.filter(
-					(booking) =>
-						booking.booking_date >= today &&
-						(booking.status === "pending" || booking.status === "approved"),
-				)
-				.sort((a, b) => a.booking_date.localeCompare(b.booking_date))[0] ??
-			null,
-		[bookings, today],
-	);
-
 	const handleProfileSave = async (event: React.FormEvent) => {
 		event.preventDefault();
 		if (!user) return;
 		setSavingProfile(true);
-		const { error } = await supabase
+		const { error: updateError } = await supabase
 			.from("profiles")
 			.update({
 				full_name: profileForm.fullName.trim() || null,
@@ -131,8 +144,8 @@ function DashboardPage() {
 			})
 			.eq("id", user.id);
 
-		if (error) {
-			toast.error(error.message);
+		if (updateError) {
+			toast.error(updateError.message);
 			setSavingProfile(false);
 			return;
 		}
@@ -159,6 +172,43 @@ function DashboardPage() {
 
 	if (!user) return null;
 
+	if (!data) {
+		return (
+			<div>
+				<PageHeader
+					eyebrow="Booker dashboard"
+					title={`Hello${profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`}
+					description="Track your request activity and jump back into an upcoming booking."
+				/>
+				<Card className="mt-6 border-border/70">
+					<CardContent className="py-10 text-center">
+						<p className="font-semibold">Couldn’t load your dashboard</p>
+						<p className="mt-1 text-sm text-muted-foreground">
+							{error ?? "Try refreshing the page."}
+						</p>
+						<button
+							type="button"
+							onClick={loadDashboard}
+							className={cn(
+								buttonVariants({ variant: "outline", size: "sm" }),
+								"mt-4",
+							)}
+						>
+							Retry
+						</button>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
+
+	const { counts, waits, most_used_venue, attendees, next_booking } = data;
+	const decided = counts.approved + counts.rejected;
+	const pendingWaitMinutes =
+		waits.avg_pending_wait_hours == null
+			? null
+			: waits.avg_pending_wait_hours * 60;
+
 	return (
 		<div>
 			<PageHeader
@@ -174,113 +224,209 @@ function DashboardPage() {
 			/>
 
 			<div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				{[
-					{ label: "Total requests", value: stats.total, icon: CalendarDays },
-					{ label: "Awaiting review", value: stats.pending, icon: Clock },
-					{ label: "Approved", value: stats.approved, icon: CheckCircle2 },
-					{ label: "Upcoming", value: stats.upcoming, icon: Building2 },
-				].map((stat) => (
-					<Card key={stat.label} className="border-border/70">
-						<CardContent className="flex items-center justify-between pt-6">
-							<div>
-								<p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-									{stat.label}
-								</p>
-								<p className="mt-1 font-[Fraunces,Georgia,serif] text-3xl font-bold">
-									{stat.value}
-								</p>
-							</div>
-							<span className="grid size-10 place-items-center rounded-xl bg-[#2451d8]/10 text-[#1c3fae] dark:bg-[#f0c75e]/10 dark:text-[#f0c75e]">
-								<stat.icon className="size-5" />
-							</span>
-						</CardContent>
-					</Card>
-				))}
+				<BookerStatCard
+					label="Approval rate"
+					value={formatPercent(counts.approval_rate)}
+					detail={
+						decided === 0
+							? "No decisions yet"
+							: `${counts.approved} of ${decided} decided requests`
+					}
+					icon={Percent}
+					tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
+				/>
+				<BookerStatCard
+					label="Avg decision wait"
+					value={formatDurationMinutes(waits.avg_decision_wait_minutes)}
+					detail={`${formatDurationMinutes(waits.median_decision_wait_minutes)} median`}
+					icon={Timer}
+					tone="bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
+				/>
+				<BookerStatCard
+					label="Most-used venue"
+					value={most_used_venue?.venue_name ?? "—"}
+					detail={
+						most_used_venue
+							? `${most_used_venue.booking_count} request${most_used_venue.booking_count === 1 ? "" : "s"}`
+							: "No venue history yet"
+					}
+					icon={MapPin}
+					tone="bg-[#2451d8]/10 text-[#1c3fae] dark:bg-[#f0c75e]/10 dark:text-[#f0c75e]"
+				/>
+				<BookerStatCard
+					label="Total attendees"
+					value={String(attendees.total_attendees)}
+					detail={`${attendees.approved_attendees} approved · ${attendees.upcoming_attendees} upcoming`}
+					icon={Users}
+					tone="bg-[#2451d8]/10 text-[#1c3fae] dark:bg-[#f0c75e]/10 dark:text-[#f0c75e]"
+				/>
 			</div>
 
 			<div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">
-				<Card className="border-border/70">
-					<CardHeader className="flex-row items-start justify-between gap-3">
-						<div>
-							<CardTitle className="font-[Fraunces,Georgia,serif] text-xl">
-								Up next
+				<div className="space-y-6">
+					<Card className="border-border/70">
+						<CardHeader className="flex-row items-start justify-between gap-3">
+							<div>
+								<CardTitle className="font-[Fraunces,Georgia,serif] text-xl">
+									Up next
+								</CardTitle>
+								<CardDescription>
+									Your nearest pending or approved request.
+								</CardDescription>
+							</div>
+							<Link
+								to="/dashboard/bookings"
+								className={cn(
+									buttonVariants({ variant: "ghost", size: "sm" }),
+									"no-underline",
+								)}
+							>
+								All bookings
+								<ArrowRight className="size-4" />
+							</Link>
+						</CardHeader>
+						<CardContent>
+							{next_booking ? (
+								<div className="rounded-xl border border-border/70 bg-background/60 p-4">
+									<div className="flex flex-wrap items-start justify-between gap-3">
+										<div className="min-w-0">
+											<p className="font-mono text-xs font-semibold text-muted-foreground">
+												{next_booking.reference}
+											</p>
+											<p className="mt-1 truncate font-semibold">
+												{next_booking.activity_name}
+											</p>
+											<p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+												<Building2 className="size-3.5" />
+												{next_booking.venue?.name ?? "Unknown venue"}
+											</p>
+										</div>
+										<div className="text-right text-sm">
+											<p className="font-semibold">
+												{formatDate(next_booking.booking_date)}
+											</p>
+											<p className="text-xs text-muted-foreground">
+												{formatTimeRange(
+													next_booking.start_time,
+													next_booking.end_time,
+												)}
+											</p>
+										</div>
+									</div>
+									<Link
+										to="/bookings/$token"
+										params={{ token: next_booking.public_token }}
+										search={{ created: false }}
+										className={cn(
+											buttonVariants({ variant: "outline", size: "sm" }),
+											"mt-4 no-underline",
+										)}
+									>
+										View booking
+										<ArrowRight className="size-4" />
+									</Link>
+								</div>
+							) : (
+								<div className="rounded-xl border border-dashed border-border/80 px-6 py-12 text-center">
+									<p className="font-semibold">Nothing upcoming</p>
+									<p className="mt-1 text-sm text-muted-foreground">
+										Submit a request and it will show up here while it is
+										pending or approved.
+									</p>
+									<Link
+										to="/book"
+										className={cn(
+											buttonVariants({ variant: "outline", size: "sm" }),
+											"mt-4 no-underline",
+										)}
+									>
+										Request a venue
+									</Link>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					<Card className="border-border/70">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2 font-[Fraunces,Georgia,serif] text-xl">
+								<Clock className="size-4 text-amber-600" />
+								Request mix
 							</CardTitle>
 							<CardDescription>
-								Your nearest pending or approved request.
+								{counts.total} request{counts.total === 1 ? "" : "s"} ·{" "}
+								{counts.pending} awaiting review
 							</CardDescription>
-						</div>
-						<Link
-							to="/dashboard/bookings"
-							className={cn(
-								buttonVariants({ variant: "ghost", size: "sm" }),
-								"no-underline",
-							)}
-						>
-							All bookings
-							<ArrowRight className="size-4" />
-						</Link>
-					</CardHeader>
-					<CardContent>
-						{nextBooking ? (
-							<div className="rounded-xl border border-border/70 bg-background/60 p-4">
-								<div className="flex flex-wrap items-start justify-between gap-3">
-									<div className="min-w-0">
-										<p className="font-mono text-xs font-semibold text-muted-foreground">
-											{nextBooking.reference}
-										</p>
-										<p className="mt-1 truncate font-semibold">
-											{nextBooking.activity_name}
-										</p>
-										<p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-											<Building2 className="size-3.5" />
-											{nextBooking.venue?.name ?? "Unknown venue"}
-										</p>
+						</CardHeader>
+						<CardContent>
+							<SegmentedBar
+								total={counts.total}
+								segments={[
+									{
+										label: "Approved",
+										value: counts.approved,
+										className: "bg-emerald-500",
+									},
+									{
+										label: "Pending",
+										value: counts.pending,
+										className: "bg-amber-400",
+									},
+									{
+										label: "Rejected",
+										value: counts.rejected,
+										className: "bg-rose-500",
+									},
+									{
+										label: "Cancelled",
+										value: counts.cancelled,
+										className: "bg-zinc-400 dark:bg-zinc-600",
+									},
+								]}
+							/>
+							<div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+								{[
+									{
+										label: "Pending",
+										value: counts.pending,
+										dot: "bg-amber-400",
+									},
+									{
+										label: "Approved",
+										value: counts.approved,
+										dot: "bg-emerald-500",
+									},
+									{
+										label: "Rejected",
+										value: counts.rejected,
+										dot: "bg-rose-500",
+									},
+									{
+										label: "Cancelled",
+										value: counts.cancelled,
+										dot: "bg-zinc-400 dark:bg-zinc-600",
+									},
+								].map((item) => (
+									<div key={item.label} className="flex items-center gap-2">
+										<span className={cn("size-2 rounded-full", item.dot)} />
+										<span className="text-muted-foreground">{item.label}</span>
+										<span className="ml-auto font-semibold">{item.value}</span>
 									</div>
-									<div className="text-right text-sm">
-										<p className="font-semibold">
-											{formatDate(nextBooking.booking_date)}
-										</p>
-										<p className="text-xs text-muted-foreground">
-											{formatTimeRange(
-												nextBooking.start_time,
-												nextBooking.end_time,
-											)}
-										</p>
-									</div>
-								</div>
-								<Link
-									to="/bookings/$token"
-									params={{ token: nextBooking.public_token }}
-									search={{ created: false }}
-									className={cn(
-										buttonVariants({ variant: "outline", size: "sm" }),
-										"mt-4 no-underline",
-									)}
-								>
-									View booking
-									<ArrowRight className="size-4" />
-								</Link>
+								))}
 							</div>
-						) : (
-							<div className="rounded-xl border border-dashed border-border/80 px-6 py-12 text-center">
-								<p className="font-semibold">Nothing upcoming</p>
-								<p className="mt-1 text-sm text-muted-foreground">
-									Submit a request and it will show up here while it is pending
-									or approved.
-								</p>
-								<Link
-									to="/book"
-									className={cn(
-										buttonVariants({ variant: "outline", size: "sm" }),
-										"mt-4 no-underline",
-									)}
-								>
-									Request a venue
-								</Link>
+							<div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+								<span>
+									Avg wait on pending requests:{" "}
+									{formatDurationMinutes(pendingWaitMinutes)}
+								</span>
+								<span>
+									{counts.upcoming} upcoming · {attendees.total_attendees} total
+									attendees
+								</span>
 							</div>
-						)}
-					</CardContent>
-				</Card>
+						</CardContent>
+					</Card>
+				</div>
 
 				<div className="space-y-4">
 					<Card className="border-border/70">

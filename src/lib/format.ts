@@ -82,6 +82,20 @@ export function formatRelativeToNow(value: string | null | undefined) {
 	return "now";
 }
 
+export function formatPercent(value: number | null | undefined, digits = 0) {
+	if (value == null || Number.isNaN(value)) return "—";
+	return `${(value * 100).toFixed(digits)}%`;
+}
+
+export function formatDurationMinutes(minutes: number | null | undefined) {
+	if (minutes == null || Number.isNaN(minutes)) return "—";
+	if (minutes < 1) return "<1 min";
+	if (minutes < 60) return `${Math.round(minutes)} min`;
+	const hours = minutes / 60;
+	if (hours < 24) return `${hours.toFixed(hours < 10 ? 1 : 0)} h`;
+	return `${(hours / 24).toFixed(1)} d`;
+}
+
 export function toLocalDate(value: string) {
 	if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
 		return new Date(`${value}T00:00:00`);
