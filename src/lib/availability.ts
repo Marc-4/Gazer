@@ -62,3 +62,25 @@ export function filterAvailabilityForVenue(
 	if (!venueId) return entries;
 	return entries.filter((entry) => entry.venue_id === venueId);
 }
+
+/**
+ * Client-side capacity guard. Returns a readable error when the attendee count
+ * exceeds the selected venue's capacity; venues without a capacity are
+ * unlimited. The server does not enforce this, so keep the rule here so the
+ * public form and the admin form stay in sync.
+ */
+export function capacityError(
+	attendeeCount: string | number | null | undefined,
+	capacity: number | null | undefined,
+) {
+	if (capacity == null || capacity <= 0) return null;
+
+	const count =
+		typeof attendeeCount === "string"
+			? Number(attendeeCount.trim())
+			: attendeeCount;
+	if (count == null || !Number.isFinite(count) || count <= 0) return null;
+	if (count <= capacity) return null;
+
+	return `This venue seats ${capacity} ${capacity === 1 ? "person" : "people"}. Reduce attendees to ${capacity} or fewer, or choose another venue.`;
+}

@@ -65,6 +65,7 @@ import {
 } from "#/lib/admin-queries";
 import { useAuth } from "#/lib/auth";
 import {
+	capacityError,
 	filterAvailabilityForVenue,
 	isAvailabilityBlocked,
 } from "#/lib/availability";
@@ -320,6 +321,15 @@ function NewBookingDialog({
 				Number(form.attendeeCount) <= 0)
 		) {
 			setError("Attendee count must be a positive whole number.");
+			return;
+		}
+
+		const capacityMessage = capacityError(
+			form.attendeeCount,
+			selectedVenue?.capacity,
+		);
+		if (capacityMessage) {
+			setError(capacityMessage);
 			return;
 		}
 
@@ -580,6 +590,7 @@ function NewBookingDialog({
 									id="admin-booking-attendees"
 									type="number"
 									min={1}
+									max={selectedVenue?.capacity ?? undefined}
 									step={1}
 									value={form.attendeeCount}
 									onChange={(changeEvent) =>
@@ -587,6 +598,11 @@ function NewBookingDialog({
 									}
 									placeholder="Optional"
 								/>
+								{selectedVenue?.capacity ? (
+									<p className="text-xs text-muted-foreground">
+										Capacity: {selectedVenue.capacity}
+									</p>
+								) : null}
 							</div>
 						</div>
 

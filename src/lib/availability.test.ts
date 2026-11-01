@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	availabilityConflicts,
 	availabilityTone,
+	capacityError,
 	filterAvailabilityForVenue,
 	groupAvailabilityByDate,
 	isAvailabilityBlocked,
@@ -118,5 +119,25 @@ describe("availability helpers", () => {
 				"venue-1",
 			),
 		).toEqual([booking]);
+	});
+});
+
+describe("capacityError", () => {
+	it("allows counts within capacity", () => {
+		expect(capacityError("120", 200)).toBeNull();
+		expect(capacityError("200", 200)).toBeNull();
+	});
+
+	it("rejects counts above venue capacity", () => {
+		expect(capacityError("201", 200)).toContain("seats 200 people");
+		expect(capacityError(5, 4)).toContain("Reduce attendees to 4");
+		expect(capacityError(2, 1)).toContain("seats 1 person");
+	});
+
+	it("ignores empty or unlimited values", () => {
+		expect(capacityError("", 200)).toBeNull();
+		expect(capacityError(null, 200)).toBeNull();
+		expect(capacityError("50", null)).toBeNull();
+		expect(capacityError("50", 0)).toBeNull();
 	});
 });

@@ -38,6 +38,7 @@ import { Textarea } from "#/components/ui/textarea";
 import { useAuth } from "#/lib/auth";
 import {
 	availabilityConflicts,
+	capacityError,
 	filterAvailabilityForVenue,
 } from "#/lib/availability";
 import { bookingUserMessage, ensureBookingUser } from "#/lib/booking-user";
@@ -90,7 +91,7 @@ function createEmptyForm(venueId = ""): BookingFormValues {
 
 const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-function validate(values: BookingFormValues) {
+function validate(values: BookingFormValues, capacity?: number | null) {
 	if (!values.venueId) return "Please choose a venue.";
 	if (!values.bookingDate) return "Please choose a booking date.";
 	if (values.bookingDate < todayIsoDate())
@@ -109,6 +110,10 @@ function validate(values: BookingFormValues) {
 			Number(values.attendeeCount) <= 0)
 	)
 		return "Attendee count must be a positive whole number.";
+
+	const capacityMessage = capacityError(values.attendeeCount, capacity);
+	if (capacityMessage) return capacityMessage;
+
 	return null;
 }
 
@@ -258,7 +263,7 @@ function BookPage() {
 
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
-		const validationError = validate(values);
+		const validationError = validate(values, selectedVenue?.capacity);
 		if (validationError) {
 			setError(validationError);
 			return;
@@ -623,6 +628,7 @@ function BookPage() {
 											id="attendees"
 											type="number"
 											min={1}
+											max={selectedVenue?.capacity ?? undefined}
 											step={1}
 											value={values.attendeeCount}
 											onChange={(event) =>
@@ -630,6 +636,11 @@ function BookPage() {
 											}
 											placeholder="e.g. 30"
 										/>
+										{selectedVenue?.capacity ? (
+											<p className="text-xs text-muted-foreground">
+												Capacity: {selectedVenue.capacity}
+											</p>
+										) : null}
 									</div>
 								</div>
 							</div>
