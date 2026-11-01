@@ -39,6 +39,11 @@ import { Separator } from "#/components/ui/separator";
 import { Skeleton } from "#/components/ui/skeleton";
 import { parseBookingLookup } from "#/lib/booking-lookup";
 import { formatDate, formatDateTime, formatTimeRange } from "#/lib/format";
+import {
+	checkRateLimit,
+	RATE_LIMITS,
+	rateLimitMessage,
+} from "#/lib/rate-limit";
 import { supabase } from "#/lib/supabase";
 import type { BookingStatus, PublicBooking } from "#/lib/types";
 import { cn } from "#/lib/utils";
@@ -125,6 +130,16 @@ function BookingStatusPage() {
 			return;
 		}
 
+		const limit = await checkRateLimit(
+			"booking:lookup",
+			RATE_LIMITS.bookingLookup,
+		);
+		if (!limit.allowed) {
+			setError(rateLimitMessage(limit.retryAfter));
+			setLoading(false);
+			return;
+		}
+
 		const { data, error: rpcError } = await supabase.rpc(
 			"get_booking_by_token",
 			{ p_token: lookup },
@@ -154,6 +169,15 @@ function BookingStatusPage() {
 
 	const handleCancel = async () => {
 		if (!lookup) return;
+
+		const limit = await checkRateLimit(
+			"booking:cancel",
+			RATE_LIMITS.bookingCancel,
+		);
+		if (!limit.allowed) {
+			toast.error(rateLimitMessage(limit.retryAfter));
+			return;
+		}
 
 		setCancelling(true);
 		const { error: cancelError } = await supabase.rpc(

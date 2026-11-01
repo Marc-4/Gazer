@@ -54,6 +54,7 @@ export interface Booking {
 	requester_email: string;
 	requester_phone: string | null;
 	attendee_count: number | null;
+	client_device_id: string | null;
 	is_auto_approved: boolean;
 	decision_note: string | null;
 	decided_by: string | null;

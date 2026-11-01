@@ -190,6 +190,7 @@ export const bookings = pgTable(
 		requesterEmail: text("requester_email").notNull(),
 		requesterPhone: text("requester_phone"),
 		attendeeCount: integer("attendee_count"),
+		clientDeviceId: text("client_device_id"),
 		isAutoApproved: boolean("is_auto_approved").notNull().default(false),
 		decisionNote: text("decision_note"),
 		decidedBy: uuid("decided_by").references(() => profiles.id, {

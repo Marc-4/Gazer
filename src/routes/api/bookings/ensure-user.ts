@@ -3,6 +3,11 @@ import {
 	getAnonServerClient,
 	getServiceRoleClient,
 } from "#/lib/admin-auth.server";
+import { RATE_LIMITS } from "#/lib/rate-limit";
+import {
+	consumeRequestRateLimit,
+	rateLimitResponse,
+} from "#/lib/rate-limit.server";
 
 interface EnsureBookingRequesterResult {
 	linked?: boolean;
@@ -85,6 +90,14 @@ export const Route = createFileRoute("/api/bookings/ensure-user")({
 				}
 
 				const fullName = result.full_name?.trim() || null;
+
+				const limit = await consumeRequestRateLimit(
+					request,
+					"booking:ensure-user",
+					RATE_LIMITS.accountInvite,
+				);
+				if (!limit.allowed) return rateLimitResponse(limit.retryAfter);
+
 				const redirectTo = appRedirectTo(request);
 				const admin = getServiceRoleClient();
 				let invited = false;

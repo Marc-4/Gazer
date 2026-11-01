@@ -41,6 +41,7 @@ import {
 	filterAvailabilityForVenue,
 } from "#/lib/availability";
 import { bookingUserMessage, ensureBookingUser } from "#/lib/booking-user";
+import { getDeviceId } from "#/lib/device-id";
 import {
 	DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
@@ -112,6 +113,9 @@ function validate(values: BookingFormValues) {
 }
 
 function mapInsertError(error: { code?: string; message?: string }) {
+	if (error.message?.toLowerCase().includes("too many booking requests")) {
+		return error.message;
+	}
 	if (error.message?.toLowerCase().includes("school event")) {
 		return "This venue is reserved for a school event on the selected date. Choose another venue or date.";
 	}
@@ -283,6 +287,7 @@ function BookPage() {
 		setError(null);
 		setSubmitting(true);
 
+		const deviceId = await getDeviceId().catch(() => null);
 		const publicToken = crypto.randomUUID();
 		const bookingId = crypto.randomUUID();
 		const { error: insertError } = await supabase.from("bookings").insert({
@@ -301,6 +306,7 @@ function BookPage() {
 			attendee_count: values.attendeeCount.trim()
 				? Number(values.attendeeCount)
 				: null,
+			client_device_id: deviceId,
 		});
 
 		if (insertError) {

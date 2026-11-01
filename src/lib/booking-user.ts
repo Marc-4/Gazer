@@ -1,3 +1,5 @@
+import { getDeviceId } from "./device-id";
+
 export interface EnsureBookingUserResult {
 	ok: boolean;
 	linked: boolean;
@@ -11,9 +13,13 @@ export async function ensureBookingUser(
 	bookingId: string,
 	publicToken: string,
 ): Promise<EnsureBookingUserResult> {
+	const deviceId = await getDeviceId().catch(() => null);
 	const response = await fetch("/api/bookings/ensure-user", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			...(deviceId ? { "x-device-id": deviceId } : {}),
+		},
 		body: JSON.stringify({ bookingId, publicToken }),
 	});
 
