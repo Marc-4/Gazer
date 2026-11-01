@@ -17,6 +17,8 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Clock,
+	Download,
+	Loader2,
 	MapPin,
 	School,
 } from "lucide-react";
@@ -41,6 +43,8 @@ import {
 	SelectValue,
 } from "#/components/ui/select";
 import { Skeleton } from "#/components/ui/skeleton";
+import { buildCalendarReport } from "#/lib/calendar-report";
+import { exportCalendarReport } from "#/lib/calendar-report-export";
 import { formatDate, formatTimeRange } from "#/lib/format";
 import { supabase } from "#/lib/supabase";
 import type {
@@ -69,6 +73,15 @@ export const Route = createFileRoute("/admin/calendar")({
 type StatusFilter = "active" | "all" | BookingStatus;
 
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const statusFilterLabels: Record<StatusFilter, string> = {
+	active: "Active",
+	all: "All statuses",
+	pending: "Pending",
+	approved: "Approved",
+	rejected: "Rejected",
+	cancelled: "Cancelled",
+};
 
 const chipStyles: Record<BookingStatus, string> = {
 	pending:
@@ -100,6 +113,7 @@ function AdminCalendar() {
 	const [loading, setLoading] = useState(true);
 	const [venueFilter, setVenueFilter] = useState("all");
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+	const [exporting, setExporting] = useState(false);
 
 	const load = useCallback(async () => {
 		const [bookingsResult, eventsResult, venuesResult] = await Promise.all([
@@ -220,6 +234,33 @@ function AdminCalendar() {
 		selectDate(format(target, "yyyy-MM-dd"));
 	};
 
+	const handleExport = async () => {
+		if (exporting) return;
+		setExporting(true);
+
+		try {
+			const report = buildCalendarReport({
+				month,
+				bookings: filtered,
+				events: filteredEvents,
+				venueLabel:
+					venueFilter === "all"
+						? "All venues"
+						: (venues.find((venue) => venue.id === venueFilter)?.name ??
+							"Selected venue"),
+				statusLabel: statusFilterLabels[statusFilter],
+			});
+
+			await exportCalendarReport(report);
+			toast.success(`Exported ${report.monthLabel} calendar`);
+		} catch (exportError) {
+			console.error("Unable to export the calendar", exportError);
+			toast.error("Unable to export the calendar. Please try again.");
+		} finally {
+			setExporting(false);
+		}
+	};
+
 	return (
 		<div>
 			<PageHeader
@@ -228,6 +269,18 @@ function AdminCalendar() {
 				description={`${monthBookings.length} bookings · ${monthEvents.length} school ${monthEvents.length === 1 ? "event" : "events"} · ${bookedDates.size} ${bookedDates.size === 1 ? "date" : "dates"} in use.`}
 				action={
 					<div className="flex flex-wrap gap-2">
+						<Button
+							variant="outline"
+							onClick={handleExport}
+							disabled={loading || exporting}
+						>
+							{exporting ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : (
+								<Download className="size-4" />
+							)}
+							Export PDF
+						</Button>
 						<Select value={venueFilter} onValueChange={setVenueFilter}>
 							<SelectTrigger className="w-44">
 								<SelectValue placeholder="All venues" />
