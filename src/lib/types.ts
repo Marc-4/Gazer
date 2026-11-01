@@ -163,6 +163,7 @@ export interface NotificationOutboxItem {
 	attempts: number;
 	last_error: string | null;
 	scheduled_for: string;
+	claimed_at: string | null;
 	sent_at: string | null;
 	created_at: string;
 	updated_at: string;

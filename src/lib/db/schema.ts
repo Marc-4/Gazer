@@ -400,6 +400,7 @@ export const notificationOutbox = pgTable(
 		scheduledFor: timestamp("scheduled_for", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
+		claimedAt: timestamp("claimed_at", { withTimezone: true }),
 		sentAt: timestamp("sent_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
