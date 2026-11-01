@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	CalendarDays,
 	Check,
+	Download,
 	Loader2,
 	Plus,
 	Search,
@@ -11,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AvailabilityCalendar } from "#/components/availability-calendar";
+import { BookingReportDialog } from "#/components/booking-report-dialog";
 import { DataPagination } from "#/components/data-pagination";
 import { EmptyState } from "#/components/empty-state";
 import { FilterSelect } from "#/components/filter-select";
@@ -679,6 +681,7 @@ function AdminBookings() {
 	const [note, setNote] = useState("");
 	const [acting, setActing] = useState<string | null>(null);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [exportOpen, setExportOpen] = useState(false);
 	const debouncedQuery = useDebouncedValue(query);
 	const { review } = Route.useSearch();
 	const navigate = Route.useNavigate();
@@ -849,10 +852,16 @@ function AdminBookings() {
 				title="Bookings"
 				description="Create bookings manually, approve or reject pending requests, and review history."
 				action={
-					<Button onClick={() => setCreateOpen(true)}>
-						<Plus className="size-4" />
-						New booking
-					</Button>
+					<div className="flex flex-wrap gap-2">
+						<Button variant="outline" onClick={() => setExportOpen(true)}>
+							<Download className="size-4" />
+							Export
+						</Button>
+						<Button onClick={() => setCreateOpen(true)}>
+							<Plus className="size-4" />
+							New booking
+						</Button>
+					</div>
 				}
 			/>
 
@@ -1064,6 +1073,17 @@ function AdminBookings() {
 				onSaved={() => {
 					setPage(1);
 					// refresh();
+				}}
+			/>
+
+			<BookingReportDialog
+				open={exportOpen}
+				onOpenChange={setExportOpen}
+				venues={venueOptions}
+				defaults={{
+					status: filter,
+					venueId: venueFilter === "all" ? undefined : venueFilter,
+					date: bookingDateFilter || undefined,
 				}}
 			/>
 

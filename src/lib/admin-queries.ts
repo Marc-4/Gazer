@@ -1,3 +1,8 @@
+import {
+	type BookingReportFilters,
+	type BookingReportRow,
+	normalizeFilters,
+} from "./booking-report";
 import { todayIsoDate } from "./format";
 import { supabase } from "./supabase";
 import type {
@@ -105,6 +110,97 @@ export async function fetchBookingById(id: string) {
 
 	if (error) throw error;
 	return (data as BookingWithVenue | null) ?? null;
+}
+
+const REPORT_SELECT = [
+	"reference",
+	"status",
+	"booking_date",
+	"start_time",
+	"end_time",
+	"venue_id",
+	"venue_name",
+	"activity_name",
+	"organization_name",
+	"requester_name",
+	"requester_email",
+	"requester_phone",
+	"attendee_count",
+	"created_at",
+	"decision_note",
+	"is_auto_approved",
+].join(", ");
+
+const REPORT_PAGE_SIZE = 1000;
+export const REPORT_MAX_ROWS = 20_000;
+
+export async function countBookingReportRows(
+	filters: BookingReportFilters,
+): Promise<number> {
+	const normalized = normalizeFilters(filters);
+	let request = supabase
+		.from("bookings_search")
+		.select("id", { count: "exact", head: true });
+
+	if (normalized.from) request = request.gte("booking_date", normalized.from);
+	if (normalized.to) request = request.lte("booking_date", normalized.to);
+	if (normalized.venueIds.length > 0)
+		request = request.in("venue_id", normalized.venueIds);
+	if (normalized.statuses.length > 0)
+		request = request.in("status", normalized.statuses);
+
+	const { count, error } = await request;
+	if (error) throw error;
+	return count ?? 0;
+}
+
+/**
+ * Loads every booking that matches the report filters. PostgREST caps a single
+ * response, so rows are fetched in pages until the exact count is reached.
+ */
+export async function fetchBookingReportRows(
+	filters: BookingReportFilters,
+): Promise<BookingReportRow[]> {
+	const normalized = normalizeFilters(filters);
+	const rows: BookingReportRow[] = [];
+	let offset = 0;
+	let total: number | null = null;
+
+	while (total === null || offset < total) {
+		let request = supabase
+			.from("bookings_search")
+			.select(REPORT_SELECT, offset === 0 ? { count: "exact" } : undefined);
+
+		if (normalized.from) request = request.gte("booking_date", normalized.from);
+		if (normalized.to) request = request.lte("booking_date", normalized.to);
+		if (normalized.venueIds.length > 0)
+			request = request.in("venue_id", normalized.venueIds);
+		if (normalized.statuses.length > 0)
+			request = request.in("status", normalized.statuses);
+
+		const { data, error, count } = await request
+			.order("booking_date", { ascending: true })
+			.order("start_time", { ascending: true, nullsFirst: true })
+			.order("id", { ascending: true })
+			.range(offset, offset + REPORT_PAGE_SIZE - 1);
+
+		if (error) throw error;
+		if (offset === 0) total = count ?? 0;
+
+		const page = (data as unknown as BookingReportRow[] | null) ?? [];
+		if (page.length === 0) break;
+
+		rows.push(...page);
+		offset += page.length;
+
+		if (rows.length > REPORT_MAX_ROWS) {
+			throw new Error(
+				`This report is limited to ${REPORT_MAX_ROWS.toLocaleString("en-US")} bookings. Narrow the date range, venues, or statuses.`,
+			);
+		}
+	}
+
+	return rows;
 }
 
 export async function countBookings() {
