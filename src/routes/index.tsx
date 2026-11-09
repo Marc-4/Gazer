@@ -65,39 +65,6 @@ function Home() {
 
 	return (
 		<div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
-			<div className="flex flex-col gap-5 border-b border-border/70 pb-8 sm:flex-row sm:items-end sm:justify-between">
-				<div>
-					<p className="island-kicker text-xs font-bold uppercase tracking-[0.16em]">
-						NBSC Activity Booking System
-					</p>
-					<h1 className="mt-2 font-[Fraunces,Georgia,serif] text-4xl font-bold tracking-tight">
-						Book a venue
-					</h1>
-					<p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-						Choose a space, pick a date, and submit a request. Each venue can
-						host one approved booking per time slot. Pending requests may
-						overlap until an administrator approves one, and school events
-						reserve the whole date.
-					</p>
-				</div>
-				<div className="flex flex-wrap gap-2">
-					<Link to="/book" className={cn(buttonVariants(), "no-underline")}>
-						<CalendarPlus className="size-4" />
-						New request
-					</Link>
-					<Link
-						to="/bookings"
-						className={cn(
-							buttonVariants({ variant: "outline" }),
-							"no-underline",
-						)}
-					>
-						<Search className="size-4" />
-						Check status
-					</Link>
-				</div>
-			</div>
-
 			{openSeason ? (
 				<div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 dark:border-amber-400/20 dark:bg-amber-400/10">
 					<CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-300" />
@@ -111,7 +78,7 @@ function Home() {
 
 			{isAdmin ? (
 				<Card className="mt-6 border-[#2451d8]/25 bg-[#2451d8]/5 dark:border-[#f0c75e]/20 dark:bg-[#f0c75e]/5">
-					<CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+					<CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<p className="text-sm font-semibold">Administrator access</p>
 							<p className="text-xs text-muted-foreground">
